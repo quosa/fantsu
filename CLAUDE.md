@@ -28,7 +28,8 @@ fantsu/
   prompts.py      system prompt strings — tune here first
   npc.py          LLMClient protocol + NPC dialogue call
   narrator.py     process_input: LLM → tool dispatch → narration
-  main.py         game loop + OllamaClient (excluded from mypy)
+  ollama_client.py  OllamaClient — the only file that imports ollama (excluded from mypy)
+  main.py         game loop entry point (excluded from mypy)
 
 tests/
   test_state.py / test_world.py / test_renderer.py
@@ -38,7 +39,7 @@ tests/
 ## Architecture rules
 
 - **No circular imports.** Dependency order:
-  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → main`
+  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → ollama_client → main`
 - **No LLM calls in tests.** `npc.py` and `narrator.py` accept an `LLMClient`
   argument; tests inject `MockLLMClient` / `MockNarratorClient`.
 - **Tools are pure game logic.** They take `GameState`, mutate it in place,

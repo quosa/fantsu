@@ -2,34 +2,11 @@
 
 from __future__ import annotations
 
-import ollama as ollama_lib
-
 from fantsu import world
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
+from fantsu.ollama_client import OllamaClient
 from fantsu.renderer import describe_location
-
-
-class OllamaClient:
-    """Production LLM client backed by the local Ollama instance."""
-
-    def chat(
-        self,
-        model: str,
-        messages: list[dict[str, str]],
-        tools: list[dict[str, object]] | None = None,
-    ) -> dict[str, object]:
-        kwargs = {"model": model, "messages": messages}
-        if tools:
-            kwargs["tools"] = tools  # type: ignore[assignment]
-        response = ollama_lib.chat(**kwargs)
-        # ollama returns a ChatResponse object; normalise to plain dict
-        if hasattr(response, "model_dump"):
-            raw: dict[str, object] = response.model_dump()
-        else:
-            raw = dict(response)
-        return raw
-
 
 OPENING_SCENE = """\
 You wake to a sharp knock at your door.

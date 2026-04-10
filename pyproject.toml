@@ -36,7 +36,7 @@ select = ["E", "F", "I", "UP"]
 python_version = "3.11"
 strict = true
 files = ["fantsu/"]
-exclude = ["fantsu/main\\.py"]
+exclude = ["fantsu/main\\.py", "fantsu/ollama_client\\.py"]
 
 [[tool.mypy.overrides]]
 module = "ollama"
