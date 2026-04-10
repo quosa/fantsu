@@ -80,8 +80,10 @@ ALL_TOOLS: list[dict[str, object]] = [
             "name": "use_item",
             "description": (
                 "Use an item from inventory on a target. "
-                "Known targets: 'feed_sack' (fill bucket), "
-                "'animals' (feed animals in barn)."
+                "To fill the bucket: use_item(bucket, feed_sack). "
+                "To feed animals in the barn: use_item(bucket, animals) "
+                "— also accepts 'chickens', 'goats', 'livestock', 'trough'. "
+                "To wear boots: use_item(player_boots, self)."
             ),
             "parameters": {
                 "type": "object",

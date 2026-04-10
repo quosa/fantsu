@@ -197,6 +197,18 @@ def test_use_item_feed_animals_completes_task(state: GameState) -> None:
     assert task.completed is True
 
 
+def test_use_item_feed_animals_alias_targets(state: GameState) -> None:
+    for target in ("chickens", "goats", "livestock", "trough"):
+        s = build()
+        s.player_location_id = "barn"
+        s.player_inventory.append("bucket")
+        s.items["bucket"].state["filled"] = True
+        result = use_item("bucket", target, s)
+        assert result.ok, f"target '{target}' should work"
+        task = next(t for t in s.tasks if t.id == "feed_animals")
+        assert task.completed is True
+
+
 def test_use_item_feed_animals_empty_bucket(state: GameState) -> None:
     state.player_location_id = "barn"
     state.player_inventory.append("bucket")

@@ -8,7 +8,6 @@ from fantsu import world
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
 from fantsu.renderer import describe_location
-from fantsu.state import GameState
 
 
 class OllamaClient:
@@ -42,15 +41,6 @@ you're done."
 
 His footsteps retreat toward the main hall.
 """
-
-
-def _check_tasks(state: GameState) -> list[str]:
-    """Return descriptions of any tasks just completed."""
-    completed = []
-    for task in state.tasks:
-        if task.completed:
-            completed.append(task.description)
-    return completed
 
 
 def main() -> None:
@@ -89,10 +79,24 @@ def main() -> None:
         print(f"\n{narration}")
 
         # Announce newly completed tasks
+        newly_done = []
         for task in state.tasks:
             if task.completed and task.id not in seen_completed:
                 seen_completed.add(task.id)
-                print(f"\n[Task complete: {task.description}]")
+                newly_done.append(task)
+
+        for task in newly_done:
+            print(f"\n*** Task complete: {task.description} ***")
+
+        # If every task is done, print the ending and stop
+        if state.tasks and all(t.completed for t in state.tasks):
+            print(
+                "\nAldric finds you as you leave the barn. He looks at the "
+                "contented animals and gives a rare nod.\n"
+                '"Good work. There\'s bread and butter waiting in the kitchen."\n'
+                "\nYou have completed all tasks. Well done."
+            )
+            break
 
         # Tick NPC schedules after each player action
         world.tick_npcs(state)

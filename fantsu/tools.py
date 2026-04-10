@@ -222,7 +222,12 @@ def _feed_animals(state: GameState) -> ToolResult:
 # Dispatch table: (item_id, target_id) → handler
 _ITEM_HANDLERS: dict[tuple[str, str], Callable[[GameState], ToolResult]] = {
     ("bucket", "feed_sack"): _fill_bucket,
+    # feed animals — accept any natural target the LLM might choose
     ("bucket", "animals"): _feed_animals,
+    ("bucket", "chickens"): _feed_animals,
+    ("bucket", "goats"): _feed_animals,
+    ("bucket", "livestock"): _feed_animals,
+    ("bucket", "trough"): _feed_animals,
     # boots — accept any natural target the LLM might choose
     ("player_boots", "self"): _wear_boots,
     ("player_boots", "player"): _wear_boots,
