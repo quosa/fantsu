@@ -3,7 +3,7 @@ import os
 GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
 
 if GROQ_API_KEY:
-    NARRATOR_MODEL = "llama3-groq-8b-8192-tool-use-preview"  # tool-use optimised
+    NARRATOR_MODEL = "llama-3.1-8b-instant"  # tool-use capable
     NPC_MODEL = "llama-3.1-8b-instant"                       # fast chat model
 else:
     NARRATOR_MODEL = "mistral"
