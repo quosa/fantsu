@@ -173,6 +173,21 @@ def _fill_bucket(state: GameState) -> ToolResult:
     )
 
 
+def _wear_boots(state: GameState) -> ToolResult:
+    """Put on or acknowledge the worn boots."""
+    boots = state.items.get("player_boots")
+    if boots is None or "player_boots" not in state.player_inventory:
+        return ToolResult(ok=False, message="You need to be holding the boots.")
+    if boots.state.get("worn"):
+        return ToolResult(ok=True, message="You are already wearing your boots.")
+    boots.state["worn"] = True
+    state.event_log.append("Player put on boots.")
+    return ToolResult(
+        ok=True,
+        message="You pull on your worn leather boots. They fit like old friends.",
+    )
+
+
 def _feed_animals(state: GameState) -> ToolResult:
     """Feed the animals with a filled bucket (must be in barn)."""
     if state.player_location_id != "barn":
@@ -208,6 +223,11 @@ def _feed_animals(state: GameState) -> ToolResult:
 _ITEM_HANDLERS: dict[tuple[str, str], Callable[[GameState], ToolResult]] = {
     ("bucket", "feed_sack"): _fill_bucket,
     ("bucket", "animals"): _feed_animals,
+    # boots — accept any natural target the LLM might choose
+    ("player_boots", "self"): _wear_boots,
+    ("player_boots", "player"): _wear_boots,
+    ("player_boots", "feet"): _wear_boots,
+    ("player_boots", "player_boots"): _wear_boots,
 }
 
 

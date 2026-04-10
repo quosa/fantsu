@@ -224,6 +224,28 @@ def test_use_item_unknown_combination(state: GameState) -> None:
     assert not result.ok
 
 
+def test_use_item_wear_boots(state: GameState) -> None:
+    state.player_location_id = "farmhand_quarters"
+    state.player_inventory.append("player_boots")
+    result = use_item("player_boots", "self", state)
+    assert result.ok
+    assert state.items["player_boots"].state.get("worn") is True
+
+
+def test_use_item_wear_boots_already_worn(state: GameState) -> None:
+    state.player_inventory.append("player_boots")
+    state.items["player_boots"].state["worn"] = True
+    result = use_item("player_boots", "self", state)
+    assert result.ok
+    assert "already" in result.message
+
+
+def test_use_item_wear_boots_via_feet_target(state: GameState) -> None:
+    state.player_inventory.append("player_boots")
+    result = use_item("player_boots", "feet", state)
+    assert result.ok
+
+
 # ------------------------------------------------------------------ #
 # validate_talk_to                                                     #
 # ------------------------------------------------------------------ #
