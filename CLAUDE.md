@@ -10,7 +10,7 @@ make lint       # ruff check
 make fmt        # ruff format (auto-fixes style)
 make typecheck  # mypy strict
 make build      # verify the wheel builds cleanly
-make run        # python -m fantsu.main (requires local Ollama)
+make run        # python -m fantsu.main (uses Groq if GROQ_API_KEY is set, else local Ollama)
 ```
 
 `make check` must pass before pushing. CI runs the same command.
@@ -19,16 +19,17 @@ make run        # python -m fantsu.main (requires local Ollama)
 
 ```
 fantsu/
-  config.py       constants: model names, timing, memory limits
+  config.py       constants: model names, timing, memory limits; auto-selects backend
   state.py        all dataclasses — zero logic, always JSON-serialisable
   world.py        build() factory + tick_npcs() + advance_time()
   renderer.py     pure string formatting, no I/O
   tools.py        game actions → ToolResult; no LLM calls here
-  tool_schema.py  Ollama/OpenAI tool-call JSON definitions
+  tool_schema.py  OpenAI-compatible tool-call JSON definitions
   prompts.py      system prompt strings — tune here first
   npc.py          LLMClient protocol + NPC dialogue call
   narrator.py     process_input: LLM → tool dispatch → narration
-  ollama_client.py  OllamaClient — the only file that imports ollama (excluded from mypy)
+  groq_client.py  GroqClient — calls Groq cloud API (excluded from mypy)
+  ollama_client.py  OllamaClient — calls local Ollama daemon (excluded from mypy)
   main.py         game loop entry point (excluded from mypy)
 
 tests/
@@ -39,7 +40,7 @@ tests/
 ## Architecture rules
 
 - **No circular imports.** Dependency order:
-  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → ollama_client → main`
+  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → groq_client / ollama_client → main`
 - **No LLM calls in tests.** `npc.py` and `narrator.py` accept an `LLMClient`
   argument; tests inject `MockLLMClient` / `MockNarratorClient`.
 - **Tools are pure game logic.** They take `GameState`, mutate it in place,
@@ -80,7 +81,8 @@ add to `npcs` dict, and add the npc id to the starting location's `npc_ids`.
 
 - **Narrator prompt**: `fantsu/prompts.py` → `NARRATOR_SYSTEM`
 - **NPC prompt template**: `fantsu/prompts.py` → `NPC_SYSTEM_TEMPLATE`
-- **Models**: `fantsu/config.py` → `NARRATOR_MODEL` / `NPC_MODEL`
+- **Models**: `fantsu/config.py` → `NARRATOR_MODEL` / `NPC_MODEL` (set automatically based on backend)
+- **Backend**: set `GROQ_API_KEY` env var to use Groq; unset to use local Ollama
 
 Prompt changes don't require code changes — edit and `make run` to test.
 
@@ -88,7 +90,7 @@ Prompt changes don't require code changes — edit and `make run` to test.
 
 - One test file per module
 - Tools are tested by calling them directly with a `build()` state fixture
-- LLM paths are always mocked — `make check` never calls Ollama
+- LLM paths are always mocked — `make check` never calls Ollama or Groq
 - Coverage target: 80 %+ on `fantsu/` excluding `main.py`
 
 ## What's intentionally not there yet

@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from fantsu import world
+from fantsu import config, world
+from fantsu.groq_client import GroqClient
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
 from fantsu.ollama_client import OllamaClient
@@ -23,8 +24,14 @@ His footsteps retreat toward the main hall.
 def main() -> None:
     state = world.build()
 
-    narrator_client: LLMClient = OllamaClient()
-    npc_client: LLMClient = OllamaClient()
+    if config.GROQ_API_KEY:
+        print("Backend: Groq API")
+        narrator_client: LLMClient = GroqClient()
+        npc_client: LLMClient = GroqClient()
+    else:
+        print("Backend: local Ollama")
+        narrator_client = OllamaClient()
+        npc_client = OllamaClient()
 
     # Opening scene — hardcoded, no LLM needed
     print(OPENING_SCENE)
