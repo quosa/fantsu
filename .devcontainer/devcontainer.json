@@ -1,0 +1,10 @@
+{
+  "name": "fantsu",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "pip install -e '.[dev]'",
+  "secrets": {
+    "GROQ_API_KEY": {
+      "description": "Groq API key — get one free at console.groq.com/keys"
+    }
+  }
+}

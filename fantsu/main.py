@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from fantsu import world
+from fantsu.groq_client import GroqClient
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
-from fantsu.ollama_client import OllamaClient
 from fantsu.renderer import describe_location
 
 OPENING_SCENE = """\
@@ -23,8 +23,8 @@ His footsteps retreat toward the main hall.
 def main() -> None:
     state = world.build()
 
-    narrator_client: LLMClient = OllamaClient()
-    npc_client: LLMClient = OllamaClient()
+    narrator_client: LLMClient = GroqClient()
+    npc_client: LLMClient = GroqClient()
 
     # Opening scene — hardcoded, no LLM needed
     print(OPENING_SCENE)
