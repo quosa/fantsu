@@ -41,3 +41,8 @@ exclude = ["fantsu/main\\.py", "fantsu/ollama_client\\.py"]
 [[tool.mypy.overrides]]
 module = "ollama"
 ignore_missing_imports = true
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]
