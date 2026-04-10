@@ -12,35 +12,56 @@ the landowner, and figure out how to complete it.
 ## Requirements
 
 - Python 3.11+
-- [Ollama](https://ollama.com/download) running locally (default: `http://localhost:11434`)
-- A pulled model — `mistral` is the default, `qwen3:8b` also works well
+- **Either** a free [Groq](https://console.groq.com) API key **or** [Ollama](https://ollama.com/download) running locally
+
+The backend is selected automatically at startup:
+
+| `GROQ_API_KEY` set? | Backend used |
+|---|---|
+| Yes | Groq cloud API (no local model needed) |
+| No / empty | Local Ollama (`http://localhost:11434`, model: `mistral`) |
 
 ---
 
 ## Quick start
 
+### Option A — Groq (no local GPU needed)
+
 ```bash
-# 1. Clone and install
+# 1. Get a free API key at console.groq.com, then:
+export GROQ_API_KEY=gsk_...
+
+# 2. Clone and install
 git clone https://github.com/quosa/fantsu.git
 cd fantsu
 pip install -e .
 
-# 2. Pull a model (if you haven't already)
+# 3. Play
+make run
+```
+
+### Option B — Local Ollama
+
+```bash
+# 1. Install Ollama and pull a model
 ollama pull mistral
 
+# 2. Clone and install
+git clone https://github.com/quosa/fantsu.git
+cd fantsu
+pip install -e .
+
 # 3. Play
-fantsu
-# or: python -m fantsu.main
+make run
 ```
 
-### Changing the model
+### Option C — Play in a browser (GitHub Codespaces)
 
-Edit `fantsu/config.py`:
+No local installation at all. See **[docs/codespaces_plan.md](docs/codespaces_plan.md)** for the full guide. In short:
 
-```python
-NARRATOR_MODEL = "mistral"   # change to e.g. "qwen3:8b", "llama3"
-NPC_MODEL      = "mistral"
-```
+1. Add `GROQ_API_KEY` to your [Codespaces secrets](https://github.com/settings/codespaces)
+2. Open this repo → **Code → Codespaces → New codespace**
+3. Run `make run` in the browser terminal
 
 ---
 
