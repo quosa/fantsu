@@ -100,3 +100,32 @@ Prompt changes don't require code changes — edit and `make run` to test.
 - Inventory limits or item weight
 - Combat or skill checks
 - NPC reactions to being moved by the schedule tick
+
+## Known architectural limitation: game-state / LLM context drift
+
+`narrator.process_input` makes a **single LLM call**, extracts any tool
+calls from the response, executes them, and uses their results directly
+as narration text.  The model never receives the tool results back as
+grounded facts — so within a turn it plans all actions before any of
+them execute, and across turns it only learns about world changes through
+the `event_log[-5:]` snapshot in `_build_context`.
+
+Consequences:
+- **Within a turn**: the model decides `open_portal` + `move_to` in one
+  shot, without ever confirming the door is now open.  Works when the
+  model queues them in the right order; breaks if it doesn't.
+- **Across turns**: fine-grained world state (portal open/closed, item
+  `.state` fields, NPC positions) is invisible to the model unless it
+  happens to appear in the recent event log.
+
+The proper fix is the standard tool-calling loop:
+
+```
+call LLM → get tool_calls → execute → append {"role": "tool", ...}
+messages → call LLM again for final narration
+```
+
+This gives the model grounded knowledge of what actually happened before
+it writes the narration, eliminating drift.  Until then, keep
+`_build_context` as informative as possible and write tool descriptions
+that don't rely on the model tracking state across calls.

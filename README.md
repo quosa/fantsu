@@ -108,3 +108,6 @@ The Yard → (farm gate) → South Road
 - No save/load yet (game state is in memory only)
 - Tool-call quality depends heavily on the model; larger models play better
 - NPC schedules tick but NPCs don't react to being moved
+- The narrator makes a single LLM call per turn and never feeds tool
+  results back to the model, so the LLM's description of the world can
+  drift from actual game state over time (see CLAUDE.md for details)
