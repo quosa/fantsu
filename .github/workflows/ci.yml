@@ -22,6 +22,8 @@ jobs:
 
       - name: Lint, typecheck, test
         run: make check
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
 
       - name: Verify wheel builds
         run: make build
