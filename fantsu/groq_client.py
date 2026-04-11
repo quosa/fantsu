@@ -5,14 +5,15 @@ from __future__ import annotations
 import json
 import re
 
-from openai import OpenAI
+from openai import BadRequestError, OpenAI
 
 import fantsu.config as config
 
-# Matches the inline function-call format some LLaMA models emit instead of
-# proper tool_calls: <function=name>{"key": "value"}</function>
+# Matches both inline formats LLaMA models emit instead of proper tool_calls:
+#   <function=name>{"key": "value"}</function>   (separator ">")
+#   <function=name={"key": "value"}</function>   (separator "=", no closing ">")
 _INLINE_CALL_RE = re.compile(
-    r"<function=(\w+)>(.*?)</function>", re.DOTALL
+    r"<function=(\w+)[=>](.*?)</function>", re.DOTALL
 )
 
 
@@ -47,7 +48,26 @@ class GroqClient:
         kwargs: dict[str, object] = {"model": model, "messages": messages}
         if tools:
             kwargs["tools"] = tools
-        response = self._client.chat.completions.create(**kwargs)  # type: ignore[arg-type]
+        try:
+            response = self._client.chat.completions.create(**kwargs)  # type: ignore[arg-type]
+        except BadRequestError as exc:
+            # Groq returns 400 with a 'failed_generation' field when the model
+            # emits inline function-call markup instead of proper tool_calls.
+            # Recover by parsing the raw generation out of the error body.
+            if tools:
+                body = exc.body if isinstance(exc.body, dict) else {}
+                error_info = body.get("error", {})
+                failed_gen = (
+                    error_info.get("failed_generation", "")
+                    if isinstance(error_info, dict)
+                    else ""
+                )
+                inline = _parse_inline_tool_calls(str(failed_gen))
+                if inline:
+                    clean = _INLINE_CALL_RE.sub("", str(failed_gen)).strip()
+                    return {"message": {"content": clean, "tool_calls": inline}}
+            raise
+
         msg = response.choices[0].message
 
         # Normalise to the Ollama-style dict the rest of the game expects:
@@ -66,8 +86,7 @@ class GroqClient:
                 for tc in msg.tool_calls
             ]
         elif tools and content:
-            # Some models emit inline <function=name>{...}</function> markup
-            # instead of proper tool_calls — parse and normalise them.
+            # Fallback: model returned content with inline markup but no 400 error
             inline = _parse_inline_tool_calls(content)
             if inline:
                 result["tool_calls"] = inline
