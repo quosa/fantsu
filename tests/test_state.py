@@ -113,6 +113,7 @@ def test_game_state_json_round_trip():
                 name="wooden bucket",
                 description="A bucket.",
                 state={"filled": True},
+                state_labels={"filled": "filled with grain"},
             )
         },
         npcs={
@@ -139,6 +140,7 @@ def test_game_state_json_round_trip():
     assert restored["player_inventory"] == ["bucket"]
     assert restored["locations"]["barn"]["name"] == "Barn"
     assert restored["items"]["bucket"]["state"]["filled"] is True
+    assert restored["items"]["bucket"]["state_labels"]["filled"] == "filled with grain"
     assert restored["npcs"]["jakob"]["memory"] == ["Player arrived."]
     assert restored["tasks"][0]["completed"] is False
     assert restored["event_log"] == ["Game started."]

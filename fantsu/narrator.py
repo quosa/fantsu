@@ -31,8 +31,15 @@ def _build_context(state: GameState) -> str:
     loc = state.locations.get(state.player_location_id)
     loc_name = loc.name if loc else state.player_location_id
 
+    def _item_display(item_id: str) -> str:
+        item = state.items[item_id]
+        notes = [
+            label for key, label in item.state_labels.items() if item.state.get(key)
+        ]
+        return f"{item.name} ({', '.join(notes)})" if notes else item.name
+
     inventory_names = [
-        state.items[i].name
+        _item_display(i)
         for i in state.player_inventory
         if i in state.items
     ]
@@ -73,18 +80,38 @@ def _dispatch_tool_call(
 ) -> ToolResult:
     """Execute one tool call and return the result."""
     if name == "move_to":
-        return move_to(str(args["location_id"]), state)
+        location_id = args.get("location_id")
+        if not isinstance(location_id, str):
+            return ToolResult(ok=False, message="move_to requires location_id.")
+        return move_to(location_id, state)
     if name == "open_portal":
-        return open_portal(str(args["location_id"]), state)
+        location_id = args.get("location_id")
+        if not isinstance(location_id, str):
+            return ToolResult(ok=False, message="open_portal requires location_id.")
+        return open_portal(location_id, state)
     if name == "take_item":
-        return take_item(str(args["item_id"]), state)
+        item_id = args.get("item_id")
+        if not isinstance(item_id, str):
+            return ToolResult(ok=False, message="take_item requires item_id.")
+        return take_item(item_id, state)
     if name == "drop_item":
-        return drop_item(str(args["item_id"]), state)
+        item_id = args.get("item_id")
+        if not isinstance(item_id, str):
+            return ToolResult(ok=False, message="drop_item requires item_id.")
+        return drop_item(item_id, state)
     if name == "use_item":
-        return use_item(str(args["item_id"]), str(args["target_id"]), state)
+        item_id = args.get("item_id")
+        target_id = args.get("target_id")
+        if not isinstance(item_id, str) or not isinstance(target_id, str):
+            return ToolResult(
+                ok=False, message="use_item requires item_id and target_id."
+            )
+        return use_item(item_id, target_id, state)
     if name == "talk_to":
-        npc_id = str(args["npc_id"])
-        message = str(args["message"])
+        npc_id = args.get("npc_id")
+        message = args.get("message")
+        if not isinstance(npc_id, str) or not isinstance(message, str):
+            return ToolResult(ok=False, message="talk_to requires npc_id and message.")
         error = validate_talk_to(npc_id, state)
         if error is not None:
             return error

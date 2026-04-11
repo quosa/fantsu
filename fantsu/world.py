@@ -217,6 +217,7 @@ def build() -> GameState:
             description="A sturdy wooden bucket with a rope handle.",
             portable=True,
             state={"filled": False},
+            state_labels={"filled": "filled with grain"},
         ),
         "feed_sack": Item(
             id="feed_sack",

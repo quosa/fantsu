@@ -47,6 +47,7 @@ class Item:
     description: str
     portable: bool = True
     state: dict[str, object] = field(default_factory=dict)
+    state_labels: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
