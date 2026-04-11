@@ -310,13 +310,26 @@ def test_process_input_full_feeding_sequence(
 # ------------------------------------------------------------------ #
 
 
-def test_use_item_missing_args_returns_error_not_exception(
-    state: GameState, npc_client: MockNPCClient
+@pytest.mark.parametrize(
+    ("tool_name", "args", "expected_fragment"),
+    [
+        ("use_item", {}, "use_item requires"),
+        ("open_portal", {}, "open_portal requires"),
+        ("move_to", {}, "move_to requires"),
+        ("take_item", {}, "take_item requires"),
+        ("drop_item", {}, "drop_item requires"),
+        ("talk_to", {}, "talk_to requires"),
+    ],
+)
+def test_dispatch_missing_args_returns_error_not_exception(
+    state: GameState,
+    npc_client: MockNPCClient,
+    tool_name: str,
+    args: dict[str, object],
+    expected_fragment: str,
 ) -> None:
-    """If the LLM omits item_id/target_id, get a clean error message, not a crash."""
-    # No item_id or target_id in args — simulates malformed LLM output
-    narrator = MockNarratorClient(
-        tool_calls=[_tool_call("use_item", {})]
-    )
-    narration, _ = process_input("feed animals with grain", state, narrator, npc_client)
-    assert "use_item requires" in narration
+    """Malformed LLM tool calls (missing required args) produce a clean in-game
+    error message rather than raising a KeyError that surfaces as [Error: ...]."""
+    narrator = MockNarratorClient(tool_calls=[_tool_call(tool_name, args)])
+    narration, _ = process_input("do something", state, narrator, npc_client)
+    assert expected_fragment in narration
