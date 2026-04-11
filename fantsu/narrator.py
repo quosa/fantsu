@@ -43,9 +43,23 @@ def _build_context(state: GameState) -> str:
         "\n".join(f"- {e}" for e in recent_events) if recent_events else "(none)"
     )
 
+    # Include exit destination IDs explicitly so the model passes the correct
+    # location_id to open_portal / move_to rather than guessing from the label.
+    exit_parts: list[str] = []
+    if loc:
+        for ex in loc.exits:
+            portal_info = (
+                f" [{ex.portal.description}, {ex.portal.state}]"
+                if ex.portal
+                else ""
+            )
+            exit_parts.append(f"{ex.label} (id={ex.destination}){portal_info}")
+    exits_text = "; ".join(exit_parts) if exit_parts else "none"
+
     return (
         f"Time: {format_time(state.time)}\n"
         f"Location: {loc_name}\n"
+        f"Exits: {exits_text}\n"
         f"Carrying: {inventory_text}\n"
         f"Recent events:\n{events_text}"
     )
