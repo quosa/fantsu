@@ -62,8 +62,7 @@ def test_parse_inline_calls_greater_than_separator() -> None:
 
 
 def test_parse_inline_calls_equals_separator() -> None:
-    """Parses <function=name={"k": "v"}</function> format (the variant Groq reports
-    in failed_generation, using '=' instead of '>' after the function name)."""
+    """Parses <function=name={"k": "v"}</function> (separator '=')."""
     from fantsu.groq_client import _parse_inline_tool_calls
 
     calls = _parse_inline_tool_calls(
@@ -74,6 +73,20 @@ def test_parse_inline_calls_equals_separator() -> None:
     assert isinstance(func, dict)
     assert func["name"] == "move_to"
     assert json.loads(str(func["arguments"])) == {"location_id": "main_hall"}
+
+
+def test_parse_inline_calls_no_separator() -> None:
+    """Parses <function=name{"k": "v"}</function> (no separator — third format)."""
+    from fantsu.groq_client import _parse_inline_tool_calls
+
+    calls = _parse_inline_tool_calls(
+        '<function=move_to{"location_id": "Main Hall"}</function>'
+    )
+    assert len(calls) == 1
+    func = calls[0]["function"]
+    assert isinstance(func, dict)
+    assert func["name"] == "move_to"
+    assert json.loads(str(func["arguments"])) == {"location_id": "Main Hall"}
 
 
 def test_parse_inline_calls_multiple() -> None:
@@ -105,13 +118,28 @@ def test_parse_inline_calls_empty_string() -> None:
     assert _parse_inline_tool_calls("") == []
 
 
-def test_bad_request_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
-    """GroqClient recovers from a 400 BadRequestError containing failed_generation."""
+def _make_fake_client(fake_error: Exception) -> object:
+    """Return a minimal fake openai client that raises fake_error on create."""
+    from fantsu.groq_client import GroqClient
+
+    client = object.__new__(GroqClient)
+
+    class _FakeInner:
+        class chat:
+            class completions:
+                @staticmethod
+                def create(**_kwargs: object) -> object:
+                    raise fake_error
+
+    client._client = _FakeInner()  # type: ignore[attr-defined]
+    return client
+
+
+def test_bad_request_recovery_wrapped_body() -> None:
+    """Recovers when exc.body has {"error": {"failed_generation": ...}}."""
     from unittest.mock import MagicMock
 
     from openai import BadRequestError
-
-    from fantsu.groq_client import GroqClient
 
     fake_error = BadRequestError(
         message="Failed to call a function.",
@@ -126,31 +154,47 @@ def test_bad_request_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
             }
         },
     )
-
-    client = object.__new__(GroqClient)  # skip __init__ / no real API key needed
-
-    class _FakeInner:
-        class chat:
-            class completions:
-                @staticmethod
-                def create(**_kwargs: object) -> object:
-                    raise fake_error
-
-    client._client = _FakeInner()  # type: ignore[attr-defined]
-
-    response = client.chat(
+    client = _make_fake_client(fake_error)
+    response = client.chat(  # type: ignore[attr-defined]
         model="any",
         messages=[{"role": "user", "content": "go"}],
         tools=tool_schema.ALL_TOOLS,
     )
-    message = response.get("message", {})
-    assert isinstance(message, dict)
-    tool_calls = message.get("tool_calls", [])
+    tool_calls = response["message"]["tool_calls"]  # type: ignore[index]
     assert len(tool_calls) == 1
-    func = tool_calls[0]["function"]
-    assert isinstance(func, dict)
-    assert func["name"] == "move_to"
-    assert json.loads(str(func["arguments"])) == {"location_id": "main_hall"}
+    assert tool_calls[0]["function"]["name"] == "move_to"  # type: ignore[index]
+    args = json.loads(tool_calls[0]["function"]["arguments"])  # type: ignore[index]
+    assert args == {"location_id": "main_hall"}
+
+
+def test_bad_request_recovery_unwrapped_body() -> None:
+    """Recovers when exc.body is {"failed_generation": ...} (SDK unwraps error key)."""
+    from unittest.mock import MagicMock
+
+    from openai import BadRequestError
+
+    fake_error = BadRequestError(
+        message="Failed to call a function.",
+        response=MagicMock(),
+        body={
+            "message": "Failed to call a function.",
+            "code": "tool_use_failed",
+            "failed_generation": (
+                '<function=move_to{"location_id": "main_hall"}</function>'
+            ),
+        },
+    )
+    client = _make_fake_client(fake_error)
+    response = client.chat(  # type: ignore[attr-defined]
+        model="any",
+        messages=[{"role": "user", "content": "go"}],
+        tools=tool_schema.ALL_TOOLS,
+    )
+    tool_calls = response["message"]["tool_calls"]  # type: ignore[index]
+    assert len(tool_calls) == 1
+    assert tool_calls[0]["function"]["name"] == "move_to"  # type: ignore[index]
+    args = json.loads(tool_calls[0]["function"]["arguments"])  # type: ignore[index]
+    assert args == {"location_id": "main_hall"}
 
 
 # ------------------------------------------------------------------ #

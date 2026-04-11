@@ -9,12 +9,34 @@ from openai import BadRequestError, OpenAI
 
 import fantsu.config as config
 
-# Matches both inline formats LLaMA models emit instead of proper tool_calls:
-#   <function=name>{"key": "value"}</function>   (separator ">")
-#   <function=name={"key": "value"}</function>   (separator "=", no closing ">")
+# Matches inline formats LLaMA models emit instead of proper tool_calls.
+# The separator between the function name and the JSON args varies by model
+# version — ">", "=", or absent entirely — so it is made optional:
+#   <function=name>{"key": "value"}</function>
+#   <function=name={"key": "value"}</function>
+#   <function=name{"key": "value"}</function>
 _INLINE_CALL_RE = re.compile(
-    r"<function=(\w+)[=>](.*?)</function>", re.DOTALL
+    r"<function=(\w+)[=>]?(.*?)</function>", re.DOTALL
 )
+
+
+def _extract_failed_generation(exc: BadRequestError) -> str:
+    """Pull the failed_generation string from a Groq 400 error body.
+
+    Groq wraps the error as {"error": {"failed_generation": ...}}.  Some
+    openai SDK versions unwrap the "error" key so exc.body is the inner dict
+    directly.  As a last resort, regex over the exception's string form.
+    """
+    body = exc.body if isinstance(exc.body, dict) else {}
+    # Handle both {"error": {"failed_generation": ...}} and {"failed_generation": ...}
+    error_info = body.get("error", body)
+    if isinstance(error_info, dict):
+        gen = error_info.get("failed_generation", "")
+        if gen:
+            return str(gen)
+    # Fallback: parse the string representation of the exception
+    m = re.search(r"'failed_generation':\s*'(.*?)'(?=[,}])", str(exc), re.DOTALL)
+    return m.group(1) if m else ""
 
 
 def _parse_inline_tool_calls(content: str) -> list[dict[str, object]]:
@@ -55,16 +77,10 @@ class GroqClient:
             # emits inline function-call markup instead of proper tool_calls.
             # Recover by parsing the raw generation out of the error body.
             if tools:
-                body = exc.body if isinstance(exc.body, dict) else {}
-                error_info = body.get("error", {})
-                failed_gen = (
-                    error_info.get("failed_generation", "")
-                    if isinstance(error_info, dict)
-                    else ""
-                )
-                inline = _parse_inline_tool_calls(str(failed_gen))
+                inline = _parse_inline_tool_calls(_extract_failed_generation(exc))
                 if inline:
-                    clean = _INLINE_CALL_RE.sub("", str(failed_gen)).strip()
+                    failed_gen = _extract_failed_generation(exc)
+                    clean = _INLINE_CALL_RE.sub("", failed_gen).strip()
                     return {"message": {"content": clean, "tool_calls": inline}}
             raise
 
