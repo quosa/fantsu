@@ -9,6 +9,14 @@ from __future__ import annotations
 import json
 
 from fantsu import config, prompts, tool_schema
+from fantsu.log import (
+    log_llm_text,
+    log_narration,
+    log_player_input,
+    log_tool_call,
+    log_tool_result,
+    log_turn_end,
+)
 from fantsu.npc import LLMClient, get_response
 from fantsu.renderer import format_time
 from fantsu.state import GameState
@@ -175,6 +183,8 @@ def process_input(
     npc_client: LLMClient,
 ) -> tuple[str, GameState]:
     """Interpret player input, execute tools, return narration and updated state."""
+    log_player_input(player_input)
+
     context = _build_context(state)
     messages: list[dict[str, str]] = [
         {"role": "system", "content": prompts.NARRATOR_SYSTEM},
@@ -191,18 +201,23 @@ def process_input(
     tool_results: list[str] = []
 
     for name, args in tool_calls:
+        log_tool_call(name, json.dumps(args, ensure_ascii=False))
         result = _dispatch_tool_call(name, args, state, npc_client)
+        log_tool_result(result.ok, result.message)
         tool_results.append(result.message)
 
     # If the narrator returned tool calls, use their results as narration;
     # otherwise fall back to the raw text content.
     if tool_results:
         narration = "\n\n".join(tool_results)
+        log_narration(narration)
     else:
         narration = _extract_text(response)
         if not narration:
             narration = "Nothing happens."
+        log_llm_text(narration)
 
+    log_turn_end()
     return narration, state
 
 
