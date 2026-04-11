@@ -86,6 +86,20 @@ add to `npcs` dict, and add the npc id to the starting location's `npc_ids`.
 
 Prompt changes don't require code changes — edit and `make run` to test.
 
+## Documentation for significant changes
+
+For any significant change (new feature, architectural decision, prompt
+tuning, behaviour fix), create a plan document in `docs/` and include it
+in the same PR:
+
+- Name it descriptively: `docs/<topic>_plan.md`
+- Include: the problem being solved, the approach chosen and why, what was
+  rejected and why, and a verification checklist
+- Commit it alongside the code change, not as a follow-up
+
+Minor changes (typos, dependency bumps, trivial refactors) don't need a
+plan doc. When in doubt, write one — they're cheap and useful later.
+
 ## Testing philosophy
 
 - One test file per module
