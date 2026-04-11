@@ -107,13 +107,15 @@ def test_parse_inline_calls_empty_string() -> None:
 
 def test_bad_request_recovery(monkeypatch: pytest.MonkeyPatch) -> None:
     """GroqClient recovers from a 400 BadRequestError containing failed_generation."""
+    from unittest.mock import MagicMock
+
     from openai import BadRequestError
 
     from fantsu.groq_client import GroqClient
 
     fake_error = BadRequestError(
         message="Failed to call a function.",
-        response=None,  # type: ignore[arg-type]
+        response=MagicMock(),
         body={
             "error": {
                 "message": "Failed to call a function.",
