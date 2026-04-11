@@ -2,9 +2,31 @@
 
 from __future__ import annotations
 
+import json
+import re
+
 from openai import OpenAI
 
 import fantsu.config as config
+
+# Matches the inline function-call format some LLaMA models emit instead of
+# proper tool_calls: <function=name>{"key": "value"}</function>
+_INLINE_CALL_RE = re.compile(
+    r"<function=(\w+)>(.*?)</function>", re.DOTALL
+)
+
+
+def _parse_inline_tool_calls(content: str) -> list[dict[str, object]]:
+    """Extract tool calls from inline <function=name>{...}</function> markup."""
+    calls: list[dict[str, object]] = []
+    for name, args_str in _INLINE_CALL_RE.findall(content):
+        args_str = args_str.strip()
+        try:
+            args: object = json.loads(args_str)
+        except json.JSONDecodeError:
+            args = {}
+        calls.append({"function": {"name": name, "arguments": json.dumps(args)}})
+    return calls
 
 
 class GroqClient:
@@ -30,7 +52,8 @@ class GroqClient:
 
         # Normalise to the Ollama-style dict the rest of the game expects:
         # {"message": {"content": "...", "tool_calls": [{"function": {...}}, ...]}}
-        result: dict[str, object] = {"content": msg.content or ""}
+        content = msg.content or ""
+        result: dict[str, object] = {"content": content}
         if msg.tool_calls:
             result["tool_calls"] = [
                 {
@@ -42,4 +65,11 @@ class GroqClient:
                 }
                 for tc in msg.tool_calls
             ]
+        elif tools and content:
+            # Some models emit inline <function=name>{...}</function> markup
+            # instead of proper tool_calls — parse and normalise them.
+            inline = _parse_inline_tool_calls(content)
+            if inline:
+                result["tool_calls"] = inline
+                result["content"] = _INLINE_CALL_RE.sub("", content).strip()
         return {"message": result}
