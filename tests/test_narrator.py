@@ -102,6 +102,20 @@ def test_build_context_shows_recent_events(state: GameState) -> None:
     assert "Player took bucket." in ctx
 
 
+def test_build_context_includes_exit_destination_ids(state: GameState) -> None:
+    # Player starts in farmhand_quarters; the exit to main_hall must appear
+    # with its exact destination id so the model passes the right location_id
+    # to open_portal / move_to.
+    ctx = build_context(state)
+    assert "id=main_hall" in ctx
+
+
+def test_build_context_includes_portal_state(state: GameState) -> None:
+    ctx = build_context(state)
+    # The wooden door starts closed — that must be visible in the context
+    assert "closed" in ctx
+
+
 # ------------------------------------------------------------------ #
 # process_input — no tool calls (plain narration)                      #
 # ------------------------------------------------------------------ #
