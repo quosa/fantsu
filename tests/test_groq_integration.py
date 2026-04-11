@@ -171,12 +171,12 @@ def test_basic_chat_returns_text(client) -> None:  # type: ignore[no-untyped-def
 
 
 @requires_groq
-def test_tool_call_structure_when_returned(client) -> None:  # type: ignore[no-untyped-def]
-    """When the model returns tool calls they must be properly structured dicts.
+def test_move_to_tool_is_called_for_kitchen(client) -> None:  # type: ignore[no-untyped-def]
+    """move_to is invoked with location_id='kitchen' when explicitly instructed.
 
-    Note: we do not assert that the model *must* call a tool — LLMs are
-    non-deterministic and may choose to respond with plain text.  The unit
-    test test_bad_request_recovery covers the recovery path without a live key.
+    The prompt names the tool and the destination directly so the model has
+    no ambiguity about what to do.  The response structure must be a properly
+    normalised dict with a JSON-string 'arguments' field.
     """
     response = client.chat(
         model=config.NARRATOR_MODEL,
@@ -184,23 +184,35 @@ def test_tool_call_structure_when_returned(client) -> None:  # type: ignore[no-u
             {
                 "role": "system",
                 "content": (
-                    "You are a game narrator. Call move_to when the player moves."
+                    "You are a game function dispatcher. "
+                    "You MUST call the move_to tool to move the player. "
+                    "Never respond with plain text."
                 ),
             },
-            {"role": "user", "content": "Move to the kitchen."},
+            {
+                "role": "user",
+                "content": (
+                    "Call the move_to tool with location_id='kitchen' "
+                    "to move the player to the kitchen."
+                ),
+            },
         ],
         tools=tool_schema.ALL_TOOLS,
     )
     message = response.get("message", {})
     assert isinstance(message, dict)
-    # Either a text response or structured tool calls — both are acceptable.
     tool_calls = message.get("tool_calls", [])
-    for tc in tool_calls:
-        func = tc.get("function", {})
-        assert isinstance(func.get("name"), str), "tool call name must be a str"
-        args_raw = func.get("arguments")
-        assert isinstance(args_raw, str), "arguments must be a JSON string"
-        assert isinstance(json.loads(args_raw), dict), "arguments must decode to a dict"
+    assert len(tool_calls) > 0, (
+        "Expected move_to to be called — got plain text instead.\n"
+        f"content: {message.get('content', '')!r}"
+    )
+    func = tool_calls[0].get("function", {})
+    assert func.get("name") == "move_to", f"unexpected tool: {func.get('name')!r}"
+    args_raw = func.get("arguments")
+    assert isinstance(args_raw, str), "arguments must be a JSON string"
+    args = json.loads(args_raw)
+    assert isinstance(args, dict), "arguments must decode to a dict"
+    assert args.get("location_id") == "kitchen"
 
 
 @requires_groq
