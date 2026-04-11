@@ -91,6 +91,21 @@ def test_build_context_shows_inventory(state: GameState) -> None:
     assert "wooden bucket" in ctx
 
 
+def test_build_context_shows_filled_bucket_label(state: GameState) -> None:
+    state.player_inventory.append("bucket")
+    state.items["bucket"].state["filled"] = True
+    ctx = build_context(state)
+    assert "filled with grain" in ctx
+
+
+def test_build_context_unfilled_bucket_has_no_label(state: GameState) -> None:
+    state.player_inventory.append("bucket")
+    # bucket starts unfilled
+    ctx = build_context(state)
+    assert "filled with grain" not in ctx
+    assert "wooden bucket" in ctx
+
+
 def test_build_context_empty_inventory(state: GameState) -> None:
     ctx = build_context(state)
     assert "nothing" in ctx
@@ -288,3 +303,20 @@ def test_process_input_full_feeding_sequence(
     _, state = process_input("feed animals", state, narrator_feed, npc_client)
     task = next(t for t in state.tasks if t.id == "feed_animals")
     assert task.completed is True
+
+
+# ------------------------------------------------------------------ #
+# _dispatch_tool_call — defensive arg handling                         #
+# ------------------------------------------------------------------ #
+
+
+def test_use_item_missing_args_returns_error_not_exception(
+    state: GameState, npc_client: MockNPCClient
+) -> None:
+    """If the LLM omits item_id/target_id, get a clean error message, not a crash."""
+    # No item_id or target_id in args — simulates malformed LLM output
+    narrator = MockNarratorClient(
+        tool_calls=[_tool_call("use_item", {})]
+    )
+    narration, _ = process_input("feed animals with grain", state, narrator, npc_client)
+    assert "use_item requires" in narration
