@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 
+from httpx import Timeout
 from openai import BadRequestError, OpenAI
 
 import fantsu.config as config
@@ -59,6 +60,7 @@ class GroqClient:
         self._client = OpenAI(
             api_key=config.GROQ_API_KEY,
             base_url="https://api.groq.com/openai/v1",
+            timeout=Timeout(connect=10.0, read=60.0, write=10.0, pool=10.0),
         )
 
     def chat(
