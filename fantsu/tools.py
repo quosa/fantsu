@@ -103,6 +103,39 @@ def open_portal(location_id: str, state: GameState) -> ToolResult:
 
 
 # ------------------------------------------------------------------ #
+# close_portal                                                         #
+# ------------------------------------------------------------------ #
+
+
+def close_portal(location_id: str, state: GameState) -> ToolResult:
+    """Close the portal on the exit leading to location_id."""
+    current = state.locations.get(state.player_location_id)
+    if current is None:
+        return ToolResult(ok=False, message="Current location not found.")
+
+    target_exit = next(
+        (ex for ex in current.exits if ex.destination == location_id), None
+    )
+    if target_exit is None:
+        return ToolResult(
+            ok=False,
+            message=f"No exit leads to '{location_id}' from here.",
+        )
+    if target_exit.portal is None:
+        return ToolResult(ok=False, message="There is nothing to close that way.")
+
+    portal = target_exit.portal
+    if portal.state != "open":
+        return ToolResult(
+            ok=True, message=f"The {portal.description} is already closed."
+        )
+
+    portal.state = "closed"
+    state.event_log.append(f"Player closed {portal.description} to {location_id}.")
+    return ToolResult(ok=True, message=f"You close the {portal.description}.")
+
+
+# ------------------------------------------------------------------ #
 # take_item                                                            #
 # ------------------------------------------------------------------ #
 
@@ -162,8 +195,6 @@ def _fill_bucket(state: GameState) -> ToolResult:
     bucket = state.items.get("bucket")
     if bucket is None:
         return ToolResult(ok=False, message="Bucket not found.")
-    if "bucket" not in state.player_inventory:
-        return ToolResult(ok=False, message="You need to be holding the bucket.")
     if bucket.state.get("filled"):
         return ToolResult(ok=True, message="The bucket is already full.")
     bucket.state["filled"] = True
@@ -219,9 +250,27 @@ def _feed_animals(state: GameState) -> ToolResult:
     )
 
 
+def _empty_bucket(state: GameState) -> ToolResult:
+    """Spill the bucket contents on the floor."""
+    bucket = state.items.get("bucket")
+    if bucket is None:
+        return ToolResult(ok=False, message="Bucket not found.")
+    if not bucket.state.get("filled"):
+        return ToolResult(ok=False, message="The bucket is already empty.")
+    bucket.state["filled"] = False
+    state.event_log.append("Player emptied the bucket.")
+    return ToolResult(
+        ok=True, message="You tip the bucket. Grain spills across the floor."
+    )
+
+
 # Dispatch table: (item_id, target_id) → handler
 _ITEM_HANDLERS: dict[tuple[str, str], Callable[[GameState], ToolResult]] = {
     ("bucket", "feed_sack"): _fill_bucket,
+    # empty the bucket
+    ("bucket", "floor"):  _empty_bucket,
+    ("bucket", "ground"): _empty_bucket,
+    ("bucket", "spill"):  _empty_bucket,
     # feed animals — accept any natural target the LLM might choose
     ("bucket", "animals"): _feed_animals,
     ("bucket", "chickens"): _feed_animals,
@@ -238,8 +287,11 @@ _ITEM_HANDLERS: dict[tuple[str, str], Callable[[GameState], ToolResult]] = {
 
 def use_item(item_id: str, target_id: str, state: GameState) -> ToolResult:
     """Use an item on a target."""
-    if item_id not in state.player_inventory:
-        return ToolResult(ok=False, message=f"You are not carrying '{item_id}'.")
+    current = state.locations.get(state.player_location_id)
+    in_inventory = item_id in state.player_inventory
+    in_location = current is not None and item_id in current.item_ids
+    if not in_inventory and not in_location:
+        return ToolResult(ok=False, message=f"You don't see '{item_id}' here.")
 
     handler = _ITEM_HANDLERS.get((item_id, target_id))
     if handler is None:
