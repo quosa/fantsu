@@ -150,6 +150,18 @@ def test_close_portal_no_portal_on_exit(state: GameState) -> None:
     assert not result.ok
 
 
+def test_close_portal_locked(state: GameState) -> None:
+    # A locked portal is already secured — closing it returns "already closed"
+    state.player_location_id = "yard"
+    exits = state.locations["yard"].exits
+    gate_exit = next(e for e in exits if e.destination == "road_south")
+    assert gate_exit.portal is not None
+    gate_exit.portal.state = "locked"
+    result = close_portal("road_south", state)
+    assert result.ok
+    assert "already closed" in result.message
+
+
 # ------------------------------------------------------------------ #
 # take_item                                                            #
 # ------------------------------------------------------------------ #
