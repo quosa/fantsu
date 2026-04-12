@@ -48,7 +48,7 @@ def _build_context(state: GameState) -> str:
         return f"{item.name} ({', '.join(notes)})" if notes else item.name
 
     inventory_names = [
-        _item_display(i)
+        f"{_item_display(i)} (id={i})"
         for i in state.player_inventory
         if i in state.items
     ]

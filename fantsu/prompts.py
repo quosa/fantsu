@@ -1,6 +1,7 @@
 """All system prompt strings, kept separate for easy tuning."""
 
 NARRATOR_SYSTEM = """\
+/no_think
 You are the narrator of a medieval text adventure set on a farmstead.
 Your primary job is to map the player's input to the correct tool call(s).
 
