@@ -45,10 +45,12 @@ def describe_location(state: GameState) -> str:
     if exit_parts:
         lines.append("Exits: " + ", ".join(exit_parts))
 
-    # Items on the ground
-    item_names = [state.items[i].name for i in loc.item_ids if i in state.items]
-    if item_names:
-        lines.append("You see: " + ", ".join(item_names))
+    # Items on the ground (include id so the LLM can pass it to take_item / use_item)
+    item_parts = [
+        f"{state.items[i].name} (id={i})" for i in loc.item_ids if i in state.items
+    ]
+    if item_parts:
+        lines.append("You see: " + ", ".join(item_parts))
 
     # NPCs present
     npc_names = [state.npcs[n].name for n in loc.npc_ids if n in state.npcs]
@@ -67,7 +69,9 @@ def describe_inventory(state: GameState) -> str:
     """Render the player's inventory."""
     if not state.player_inventory:
         return "You are carrying nothing."
-    names = [
-        state.items[i].name for i in state.player_inventory if i in state.items
+    parts = [
+        f"{state.items[i].name} (id={i})"
+        for i in state.player_inventory
+        if i in state.items
     ]
-    return "You are carrying: " + ", ".join(names)
+    return "You are carrying: " + ", ".join(parts)
