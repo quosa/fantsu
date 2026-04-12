@@ -43,6 +43,25 @@ ALL_TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "function": {
+            "name": "close_portal",
+            "description": "Close a door or gate on the exit leading to a location.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "location_id": {
+                        "type": "string",
+                        "description": (
+                            "The destination location id whose portal should be closed."
+                        ),
+                    }
+                },
+                "required": ["location_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "take_item",
             "description": "Pick up a portable item from the current location.",
             "parameters": {
@@ -79,8 +98,9 @@ ALL_TOOLS: list[dict[str, object]] = [
         "function": {
             "name": "use_item",
             "description": (
-                "Use an item from inventory on a target. "
+                "Use an item (from inventory or current location) on a target. "
                 "To fill the bucket: use_item(bucket, feed_sack). "
+                "To empty the bucket: use_item(bucket, floor). "
                 "To feed animals in the barn: use_item(bucket, animals) "
                 "— also accepts 'chickens', 'goats', 'livestock', 'trough'. "
                 "To wear boots: use_item(player_boots, self)."

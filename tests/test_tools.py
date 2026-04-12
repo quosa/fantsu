@@ -4,6 +4,7 @@ import pytest
 
 from fantsu.state import GameState
 from fantsu.tools import (
+    close_portal,
     drop_item,
     get_time,
     look,
@@ -116,6 +117,52 @@ def test_open_portal_locked(state: GameState) -> None:
 
 
 # ------------------------------------------------------------------ #
+# close_portal                                                         #
+# ------------------------------------------------------------------ #
+
+
+def test_close_portal_open_becomes_closed(state: GameState) -> None:
+    state.player_location_id = "main_hall"
+    result = close_portal("yard", state)
+    assert result.ok
+    exits = state.locations["main_hall"].exits
+    portal = next(e.portal for e in exits if e.destination == "yard")
+    assert portal is not None
+    assert portal.state == "closed"
+
+
+def test_close_portal_already_closed(state: GameState) -> None:
+    state.player_location_id = "farmhand_quarters"
+    result = close_portal("main_hall", state)
+    assert result.ok
+    assert "already closed" in result.message
+
+
+def test_close_portal_no_such_exit(state: GameState) -> None:
+    state.player_location_id = "barn"
+    result = close_portal("kitchen", state)
+    assert not result.ok
+
+
+def test_close_portal_no_portal_on_exit(state: GameState) -> None:
+    state.player_location_id = "storehouse"
+    result = close_portal("yard", state)
+    assert not result.ok
+
+
+def test_close_portal_locked(state: GameState) -> None:
+    # A locked portal is already secured — closing it returns "already closed"
+    state.player_location_id = "yard"
+    exits = state.locations["yard"].exits
+    gate_exit = next(e for e in exits if e.destination == "road_south")
+    assert gate_exit.portal is not None
+    gate_exit.portal.state = "locked"
+    result = close_portal("road_south", state)
+    assert result.ok
+    assert "already closed" in result.message
+
+
+# ------------------------------------------------------------------ #
 # take_item                                                            #
 # ------------------------------------------------------------------ #
 
@@ -225,9 +272,65 @@ def test_use_item_feed_animals_wrong_location(state: GameState) -> None:
     assert not result.ok
 
 
-def test_use_item_not_in_inventory(state: GameState) -> None:
+def test_use_item_not_accessible(state: GameState) -> None:
+    # Player in farmhand_quarters; bucket is in storehouse — not reachable
+    state.player_location_id = "farmhand_quarters"
+    assert "bucket" not in state.player_inventory
+    assert "bucket" not in state.locations["farmhand_quarters"].item_ids
     result = use_item("bucket", "feed_sack", state)
     assert not result.ok
+    assert "don't see" in result.message
+
+
+def test_use_item_fill_bucket_from_floor(state: GameState) -> None:
+    # Bucket on the floor (not in inventory) can be filled from the feed_sack
+    state.player_location_id = "storehouse"
+    assert "bucket" not in state.player_inventory
+    assert "bucket" in state.locations["storehouse"].item_ids
+    result = use_item("bucket", "feed_sack", state)
+    assert result.ok
+    assert state.items["bucket"].state["filled"] is True
+
+
+def test_use_item_fill_bucket_not_accessible(state: GameState) -> None:
+    # Bucket in a different room — cannot fill it
+    state.player_location_id = "farmhand_quarters"
+    assert "bucket" not in state.player_inventory
+    result = use_item("bucket", "feed_sack", state)
+    assert not result.ok
+    assert "don't see" in result.message
+
+
+def test_use_item_empty_bucket_in_inventory(state: GameState) -> None:
+    state.player_inventory.append("bucket")
+    state.items["bucket"].state["filled"] = True
+    result = use_item("bucket", "floor", state)
+    assert result.ok
+    assert state.items["bucket"].state["filled"] is False
+
+
+def test_use_item_empty_bucket_from_floor(state: GameState) -> None:
+    state.player_location_id = "storehouse"
+    state.items["bucket"].state["filled"] = True
+    assert "bucket" not in state.player_inventory
+    result = use_item("bucket", "floor", state)
+    assert result.ok
+    assert state.items["bucket"].state["filled"] is False
+
+
+def test_use_item_empty_bucket_already_empty(state: GameState) -> None:
+    state.player_inventory.append("bucket")
+    result = use_item("bucket", "floor", state)
+    assert not result.ok
+    assert "already empty" in result.message
+
+
+def test_use_item_empty_bucket_not_accessible(state: GameState) -> None:
+    state.player_location_id = "farmhand_quarters"
+    assert "bucket" not in state.player_inventory
+    result = use_item("bucket", "floor", state)
+    assert not result.ok
+    assert "don't see" in result.message
 
 
 def test_use_item_unknown_combination(state: GameState) -> None:

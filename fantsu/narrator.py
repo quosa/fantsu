@@ -22,6 +22,7 @@ from fantsu.renderer import format_time
 from fantsu.state import GameState
 from fantsu.tools import (
     ToolResult,
+    close_portal,
     drop_item,
     get_time,
     look,
@@ -97,6 +98,11 @@ def _dispatch_tool_call(
         if not isinstance(location_id, str):
             return ToolResult(ok=False, message="open_portal requires location_id.")
         return open_portal(location_id, state)
+    if name == "close_portal":
+        location_id = args.get("location_id")
+        if not isinstance(location_id, str):
+            return ToolResult(ok=False, message="close_portal requires location_id.")
+        return close_portal(location_id, state)
     if name == "take_item":
         item_id = args.get("item_id")
         if not isinstance(item_id, str):
