@@ -72,10 +72,18 @@ def _build_context(state: GameState) -> str:
             exit_parts.append(f"{ex.label} (id={ex.destination}){portal_info}")
     exits_text = "; ".join(exit_parts) if exit_parts else "none"
 
+    ground_parts = [
+        f"{_item_display(i)} (id={i})"
+        for i in (loc.item_ids if loc else [])
+        if i in state.items
+    ]
+    ground_text = ", ".join(ground_parts) if ground_parts else "nothing"
+
     return (
         f"Time: {format_time(state.time)}\n"
         f"Location: {loc_name}\n"
         f"Exits: {exits_text}\n"
+        f"Items here: {ground_text}\n"
         f"Carrying: {inventory_text}\n"
         f"Recent events:\n{events_text}"
     )

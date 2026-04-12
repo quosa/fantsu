@@ -117,6 +117,26 @@ def test_describe_location_no_exits_omits_exits_line() -> None:
 # ------------------------------------------------------------------ #
 
 
+def test_describe_location_items_no_id_hint() -> None:
+    """Player-facing output must not expose internal item ids."""
+    loc = Location(
+        id="storehouse",
+        name="Storehouse",
+        type="room",
+        description_template="A cool storehouse.",
+        item_ids=["bucket"],
+    )
+    state = GameState(
+        player_location_id="storehouse",
+        locations={"storehouse": loc},
+        items={
+            "bucket": Item(id="bucket", name="wooden bucket", description="A bucket.")
+        },
+    )
+    text = describe_location(state)
+    assert "id=" not in text
+
+
 def test_describe_location_shows_items() -> None:
     loc = Location(
         id="storehouse",

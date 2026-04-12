@@ -131,6 +131,25 @@ def test_build_context_includes_portal_state(state: GameState) -> None:
     assert "closed" in ctx
 
 
+def test_build_context_shows_ground_items_with_ids(state: GameState) -> None:
+    # Player starts in farmhand_quarters; player_boots is on the ground there
+    ctx = build_context(state)
+    assert "id=player_boots" in ctx
+
+
+def test_build_context_shows_inventory_items_with_ids(state: GameState) -> None:
+    state.player_inventory.append("bucket")
+    ctx = build_context(state)
+    assert "id=bucket" in ctx
+
+
+def test_build_context_ground_items_absent_when_empty(state: GameState) -> None:
+    # Move player to a location with no items
+    state.player_location_id = "main_hall"
+    ctx = build_context(state)
+    assert "Items here: nothing" in ctx
+
+
 # ------------------------------------------------------------------ #
 # process_input — no tool calls (plain narration)                      #
 # ------------------------------------------------------------------ #
