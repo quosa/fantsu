@@ -306,8 +306,7 @@ def test_process_input_full_feeding_sequence(
     _, state = process_input("fill bucket", state, narrator_fill, npc_client)
     assert state.items["bucket"].state["filled"] is True
 
-    # Step 2: move to barn (open door first via shared Door object)
-    state.doors["barn_door"].state = "open"
+    # Step 2: teleport player to barn (door mechanics tested separately)
     state.player_location_id = "barn"
 
     # Step 3: feed animals
