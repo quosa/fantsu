@@ -27,8 +27,11 @@ from fantsu.tools import (
     get_time,
     look,
     move_to,
+    open_container,
     open_portal,
+    put_into,
     record_talk,
+    take_from,
     take_item,
     use_item,
     validate_talk_to,
@@ -64,12 +67,14 @@ def _build_context(state: GameState) -> str:
     exit_parts: list[str] = []
     if loc:
         for ex in loc.exits:
-            portal_info = (
-                f" [{ex.portal.description}, {ex.portal.state}]"
-                if ex.portal
-                else ""
-            )
-            exit_parts.append(f"{ex.label} (id={ex.destination}){portal_info}")
+            if ex.door_id is not None:
+                door = state.doors.get(ex.door_id)
+                door_info = (
+                    f" [{door.description}, {door.state}]" if door else ""
+                )
+            else:
+                door_info = ""
+            exit_parts.append(f"{ex.label} (id={ex.destination}){door_info}")
     exits_text = "; ".join(exit_parts) if exit_parts else "none"
 
     ground_parts = [
@@ -79,11 +84,20 @@ def _build_context(state: GameState) -> str:
     ]
     ground_text = ", ".join(ground_parts) if ground_parts else "nothing"
 
+    container_parts: list[str] = []
+    if loc:
+        for cid in loc.container_ids:
+            c = state.containers.get(cid)
+            if c:
+                container_parts.append(f"{c.name} ({c.state}, id={cid})")
+    containers_text = ", ".join(container_parts) if container_parts else "none"
+
     return (
         f"Time: {format_time(state.time)}\n"
         f"Location: {loc_name}\n"
         f"Exits: {exits_text}\n"
         f"Items here: {ground_text}\n"
+        f"Containers here: {containers_text}\n"
         f"Carrying: {inventory_text}\n"
         f"Recent events:\n{events_text}"
     )
@@ -142,6 +156,27 @@ def _dispatch_tool_call(
         )
         record_talk(npc_id, dialogue, state)
         return ToolResult(ok=True, message=dialogue)
+    if name == "open_container":
+        container_id = args.get("container_id")
+        if not isinstance(container_id, str):
+            return ToolResult(ok=False, message="open_container requires container_id.")
+        return open_container(container_id, state)
+    if name == "take_from":
+        container_id = args.get("container_id")
+        item_id = args.get("item_id")
+        if not isinstance(container_id, str) or not isinstance(item_id, str):
+            return ToolResult(
+                ok=False, message="take_from requires container_id and item_id."
+            )
+        return take_from(container_id, item_id, state)
+    if name == "put_into":
+        item_id = args.get("item_id")
+        container_id = args.get("container_id")
+        if not isinstance(item_id, str) or not isinstance(container_id, str):
+            return ToolResult(
+                ok=False, message="put_into requires item_id and container_id."
+            )
+        return put_into(item_id, container_id, state)
     if name == "look":
         return look(state)
     if name == "get_time":

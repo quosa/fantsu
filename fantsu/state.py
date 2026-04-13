@@ -5,18 +5,30 @@ from typing import Literal
 
 
 @dataclass
-class Portal:
-    destination: str
+class Door:
+    id: str
     description: str
     state: Literal["open", "closed", "locked"] = "closed"
     locked_by: str | None = None  # item id of key, if any
 
 
 @dataclass
+class Container:
+    id: str
+    name: str
+    description: str
+    state: Literal["open", "closed", "locked"] = "closed"
+    locked_by: str | None = None  # item id of key, if any
+    item_ids: list[str] = field(default_factory=list)
+    # True → also tracked in Location.item_ids / player_inventory
+    portable: bool = False
+
+
+@dataclass
 class Exit:
     destination: str
     label: str
-    portal: Portal | None = None  # None = walk straight through
+    door_id: str | None = None  # None = walk straight through
 
 
 @dataclass
@@ -38,6 +50,7 @@ class Location:
     item_ids: list[str] = field(default_factory=list)
     npc_ids: list[str] = field(default_factory=list)
     features: list[Feature] = field(default_factory=list)
+    container_ids: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -84,6 +97,8 @@ class GameState:
     player_location_id: str = ""
     player_inventory: list[str] = field(default_factory=list)
     locations: dict[str, Location] = field(default_factory=dict)
+    doors: dict[str, Door] = field(default_factory=dict)
+    containers: dict[str, Container] = field(default_factory=dict)
     npcs: dict[str, NPC] = field(default_factory=dict)
     items: dict[str, Item] = field(default_factory=dict)
     tasks: list[Task] = field(default_factory=list)

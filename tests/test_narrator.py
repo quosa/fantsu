@@ -306,11 +306,8 @@ def test_process_input_full_feeding_sequence(
     _, state = process_input("fill bucket", state, narrator_fill, npc_client)
     assert state.items["bucket"].state["filled"] is True
 
-    # Step 2: move to barn (open door first)
-    open_exit = state.locations["yard"].exits
-    barn_exit = next(e for e in open_exit if e.destination == "barn")
-    assert barn_exit.portal is not None
-    barn_exit.portal.state = "open"
+    # Step 2: move to barn (open door first via shared Door object)
+    state.doors["barn_door"].state = "open"
     state.player_location_id = "barn"
 
     # Step 3: feed animals

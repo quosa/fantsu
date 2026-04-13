@@ -41,14 +41,14 @@ def move_to(location_id: str, state: GameState) -> ToolResult:
             message=f"There is no way to reach '{location_id}' from here.",
         )
 
-    # Check portal state
-    if target_exit.portal is not None and target_exit.portal.state != "open":
-        portal_desc = target_exit.portal.description
-        portal_state = target_exit.portal.state
-        return ToolResult(
-            ok=False,
-            message=f"The {portal_desc} is {portal_state}.",
-        )
+    # Check door state
+    if target_exit.door_id is not None:
+        door = state.doors.get(target_exit.door_id)
+        if door is not None and door.state != "open":
+            return ToolResult(
+                ok=False,
+                message=f"The {door.description} is {door.state}.",
+            )
 
     # Move the player
     state.player_location_id = location_id
@@ -84,22 +84,21 @@ def open_portal(location_id: str, state: GameState) -> ToolResult:
             ok=False,
             message=f"No exit leads to '{location_id}' from here.",
         )
-    if target_exit.portal is None:
+    if target_exit.door_id is None:
         return ToolResult(ok=False, message="There is nothing to open that way.")
 
-    portal = target_exit.portal
-    if portal.state == "locked":
-        return ToolResult(
-            ok=False, message=f"The {portal.description} is locked."
-        )
-    if portal.state == "open":
-        return ToolResult(
-            ok=True, message=f"The {portal.description} is already open."
-        )
+    door = state.doors.get(target_exit.door_id)
+    if door is None:
+        return ToolResult(ok=False, message="There is nothing to open that way.")
 
-    portal.state = "open"
-    state.event_log.append(f"Player opened {portal.description} to {location_id}.")
-    return ToolResult(ok=True, message=f"You open the {portal.description}.")
+    if door.state == "locked":
+        return ToolResult(ok=False, message=f"The {door.description} is locked.")
+    if door.state == "open":
+        return ToolResult(ok=True, message=f"The {door.description} is already open.")
+
+    door.state = "open"
+    state.event_log.append(f"Player opened {door.description} to {location_id}.")
+    return ToolResult(ok=True, message=f"You open the {door.description}.")
 
 
 # ------------------------------------------------------------------ #
@@ -121,18 +120,19 @@ def close_portal(location_id: str, state: GameState) -> ToolResult:
             ok=False,
             message=f"No exit leads to '{location_id}' from here.",
         )
-    if target_exit.portal is None:
+    if target_exit.door_id is None:
         return ToolResult(ok=False, message="There is nothing to close that way.")
 
-    portal = target_exit.portal
-    if portal.state != "open":
-        return ToolResult(
-            ok=True, message=f"The {portal.description} is already closed."
-        )
+    door = state.doors.get(target_exit.door_id)
+    if door is None:
+        return ToolResult(ok=False, message="There is nothing to close that way.")
 
-    portal.state = "closed"
-    state.event_log.append(f"Player closed {portal.description} to {location_id}.")
-    return ToolResult(ok=True, message=f"You close the {portal.description}.")
+    if door.state != "open":
+        return ToolResult(ok=True, message=f"The {door.description} is already closed.")
+
+    door.state = "closed"
+    state.event_log.append(f"Player closed {door.description} to {location_id}.")
+    return ToolResult(ok=True, message=f"You close the {door.description}.")
 
 
 # ------------------------------------------------------------------ #
@@ -303,6 +303,86 @@ def use_item(item_id: str, target_id: str, state: GameState) -> ToolResult:
         )
 
     return handler(state)
+
+
+# ------------------------------------------------------------------ #
+# open_container / take_from / put_into                               #
+# ------------------------------------------------------------------ #
+
+
+def _container_in_scope(container_id: str, state: GameState) -> bool:
+    """True if the container is in the current location or (portable) in inventory."""
+    container = state.containers.get(container_id)
+    if container is None:
+        return False
+    current = state.locations.get(state.player_location_id)
+    in_location = current is not None and container_id in current.container_ids
+    in_inventory = container.portable and container_id in state.player_inventory
+    return in_location or in_inventory
+
+
+def open_container(container_id: str, state: GameState) -> ToolResult:
+    """Open a container in the current location (or portable one in inventory)."""
+    container = state.containers.get(container_id)
+    if container is None:
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if not _container_in_scope(container_id, state):
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if container.state == "locked":
+        return ToolResult(ok=False, message=f"The {container.name} is locked.")
+    if container.state == "open":
+        return ToolResult(ok=True, message=f"The {container.name} is already open.")
+    container.state = "open"
+    state.event_log.append(f"Player opened {container_id}.")
+    return ToolResult(ok=True, message=f"You open the {container.name}.")
+
+
+def take_from(container_id: str, item_id: str, state: GameState) -> ToolResult:
+    """Take an item from an open container."""
+    container = state.containers.get(container_id)
+    if container is None:
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if not _container_in_scope(container_id, state):
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if container.state != "open":
+        return ToolResult(
+            ok=False, message=f"The {container.name} is {container.state}."
+        )
+    if item_id not in container.item_ids:
+        return ToolResult(
+            ok=False,
+            message=f"The {container.name} does not contain '{item_id}'.",
+        )
+    item = state.items.get(item_id)
+    if item is None:
+        return ToolResult(ok=False, message=f"Item '{item_id}' does not exist.")
+    container.item_ids.remove(item_id)
+    state.player_inventory.append(item_id)
+    state.event_log.append(f"Player took {item_id} from {container_id}.")
+    return ToolResult(
+        ok=True, message=f"You take the {item.name} from the {container.name}."
+    )
+
+
+def put_into(item_id: str, container_id: str, state: GameState) -> ToolResult:
+    """Put an item from inventory into an open container."""
+    if item_id not in state.player_inventory:
+        return ToolResult(ok=False, message=f"You are not carrying '{item_id}'.")
+    container = state.containers.get(container_id)
+    if container is None:
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if not _container_in_scope(container_id, state):
+        return ToolResult(ok=False, message=f"There is no '{container_id}' here.")
+    if container.state != "open":
+        return ToolResult(
+            ok=False, message=f"The {container.name} is {container.state}."
+        )
+    item = state.items.get(item_id)
+    name = item.name if item else item_id
+    state.player_inventory.remove(item_id)
+    container.item_ids.append(item_id)
+    state.event_log.append(f"Player put {item_id} into {container_id}.")
+    return ToolResult(ok=True, message=f"You put the {name} into the {container.name}.")
 
 
 # ------------------------------------------------------------------ #
