@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 from fantsu import config, world
-from fantsu.groq_client import GroqClient
+from fantsu.clients.groq_client import GroqClient
+from fantsu.clients.ollama_client import OllamaClient
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
-from fantsu.ollama_client import OllamaClient
 from fantsu.renderer import describe_location
 
 OPENING_SCENE = """\

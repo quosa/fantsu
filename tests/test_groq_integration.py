@@ -32,7 +32,7 @@ requires_groq = pytest.mark.skipif(
 
 @pytest.fixture()
 def client():  # type: ignore[return]
-    from fantsu.groq_client import GroqClient
+    from fantsu.clients.groq_client import GroqClient
 
     return GroqClient()
 
@@ -49,7 +49,7 @@ def state():
 
 def test_parse_inline_calls_greater_than_separator() -> None:
     """Parses <function=name>{"k": "v"}</function> format."""
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     calls = _parse_inline_tool_calls(
         'some text <function=move_to>{"location_id": "kitchen"}</function> more text'
@@ -63,7 +63,7 @@ def test_parse_inline_calls_greater_than_separator() -> None:
 
 def test_parse_inline_calls_equals_separator() -> None:
     """Parses <function=name={"k": "v"}</function> (separator '=')."""
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     calls = _parse_inline_tool_calls(
         '<function=move_to={"location_id": "main_hall"}</function>'
@@ -77,7 +77,7 @@ def test_parse_inline_calls_equals_separator() -> None:
 
 def test_parse_inline_calls_no_separator() -> None:
     """Parses <function=name{"k": "v"}</function> (no separator — third format)."""
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     calls = _parse_inline_tool_calls(
         '<function=move_to{"location_id": "Main Hall"}</function>'
@@ -91,7 +91,7 @@ def test_parse_inline_calls_no_separator() -> None:
 
 def test_parse_inline_calls_multiple() -> None:
     """Multiple inline calls are all extracted."""
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     text = (
         '<function=open_portal>{"location_id": "main_hall"}</function>'
@@ -105,7 +105,7 @@ def test_parse_inline_calls_multiple() -> None:
 
 def test_parse_inline_calls_invalid_json_returns_empty_args() -> None:
     """Unparseable JSON falls back to an empty args dict rather than crashing."""
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     calls = _parse_inline_tool_calls("<function=look>not valid json</function>")
     assert len(calls) == 1
@@ -113,14 +113,14 @@ def test_parse_inline_calls_invalid_json_returns_empty_args() -> None:
 
 
 def test_parse_inline_calls_empty_string() -> None:
-    from fantsu.groq_client import _parse_inline_tool_calls
+    from fantsu.clients.groq_client import _parse_inline_tool_calls
 
     assert _parse_inline_tool_calls("") == []
 
 
 def _make_fake_client(fake_error: Exception) -> object:
     """Return a minimal fake openai client that raises fake_error on create."""
-    from fantsu.groq_client import GroqClient
+    from fantsu.clients.groq_client import GroqClient
 
     client = object.__new__(GroqClient)
 

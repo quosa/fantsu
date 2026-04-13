@@ -1,6 +1,7 @@
 import os
 
 GROQ_API_KEY: str = os.environ.get("GROQ_API_KEY", "")
+Z_API_KEY: str = os.environ.get("Z_API_KEY", "")
 
 if GROQ_API_KEY:
     NARRATOR_MODEL = "llama-3.3-70b-versatile"  # reliable tool-use support
