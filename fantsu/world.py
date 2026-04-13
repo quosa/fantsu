@@ -3,12 +3,13 @@
 from fantsu import config
 from fantsu.state import (
     NPC,
+    Container,
+    Door,
     Exit,
     Feature,
     GameState,
     Item,
     Location,
-    Portal,
     ScheduleEntry,
     Task,
 )
@@ -16,6 +17,33 @@ from fantsu.state import (
 
 def build() -> GameState:
     """Return a fully initialised GameState for the starting farmhouse world."""
+
+    # ------------------------------------------------------------------ #
+    # Doors (shared between paired exits — opening one side opens both)   #
+    # ------------------------------------------------------------------ #
+
+    doors: dict[str, Door] = {
+        "wooden_door": Door(
+            id="wooden_door",
+            description="wooden door",
+            state="closed",
+        ),
+        "front_door": Door(
+            id="front_door",
+            description="front door",
+            state="open",
+        ),
+        "barn_door": Door(
+            id="barn_door",
+            description="barn door",
+            state="closed",
+        ),
+        "farm_gate": Door(
+            id="farm_gate",
+            description="farm gate",
+            state="closed",
+        ),
+    }
 
     # ------------------------------------------------------------------ #
     # Locations                                                            #
@@ -33,11 +61,7 @@ def build() -> GameState:
             Exit(
                 destination="main_hall",
                 label="door to main hall",
-                portal=Portal(
-                    destination="main_hall",
-                    description="wooden door",
-                    state="closed",
-                ),
+                door_id="wooden_door",
             )
         ],
         item_ids=["player_boots"],
@@ -56,21 +80,13 @@ def build() -> GameState:
             Exit(
                 destination="farmhand_quarters",
                 label="door to farmhand quarters",
-                portal=Portal(
-                    destination="farmhand_quarters",
-                    description="wooden door",
-                    state="closed",
-                ),
+                door_id="wooden_door",
             ),
             Exit(destination="kitchen", label="open archway to kitchen"),
             Exit(
                 destination="yard",
                 label="front door to yard",
-                portal=Portal(
-                    destination="yard",
-                    description="front door",
-                    state="open",
-                ),
+                door_id="front_door",
             ),
         ],
         item_ids=[],
@@ -105,30 +121,18 @@ def build() -> GameState:
             Exit(
                 destination="main_hall",
                 label="front door to main hall",
-                portal=Portal(
-                    destination="main_hall",
-                    description="front door",
-                    state="open",
-                ),
+                door_id="front_door",
             ),
             Exit(destination="storehouse", label="storehouse"),
             Exit(
                 destination="barn",
                 label="barn door",
-                portal=Portal(
-                    destination="barn",
-                    description="barn door",
-                    state="closed",
-                ),
+                door_id="barn_door",
             ),
             Exit(
                 destination="road_south",
                 label="farm gate to road",
-                portal=Portal(
-                    destination="road_south",
-                    description="farm gate",
-                    state="closed",
-                ),
+                door_id="farm_gate",
             ),
         ],
         item_ids=[],
@@ -162,11 +166,7 @@ def build() -> GameState:
             Exit(
                 destination="yard",
                 label="barn door to yard",
-                portal=Portal(
-                    destination="yard",
-                    description="barn door",
-                    state="closed",
-                ),
+                door_id="barn_door",
             ),
         ],
         item_ids=["pitchfork"],
@@ -185,25 +185,97 @@ def build() -> GameState:
             Exit(
                 destination="yard",
                 label="farm gate back to yard",
-                portal=Portal(
-                    destination="yard",
-                    description="farm gate",
-                    state="closed",
-                ),
+                door_id="farm_gate",
             ),
+            Exit(destination="woods_edge", label="into the woods"),
+            Exit(destination="field_path", label="east along the field path"),
         ],
         features=[
             Feature(
                 id="dense_woods",
                 name="dense woods",
                 description="Dark, old trees press close to the road.",
+                enterable=True,
+                destination="woods_edge",
             ),
             Feature(
                 id="open_fields",
                 name="open fields",
                 description="Wide fallow fields stretch toward the horizon.",
+                enterable=True,
+                destination="field_path",
             ),
         ],
+    )
+
+    woods_edge = Location(
+        id="woods_edge",
+        name="Edge of the Wood",
+        type="room",
+        description_template=(
+            "The trees close in quickly here. Old oaks loom overhead, their roots "
+            "buckling the ground. The road is just visible through the "
+            "branches behind you."
+        ),
+        exits=[
+            Exit(destination="road_south", label="back to the road"),
+        ],
+        item_ids=["gnarled_stick"],
+        npc_ids=[],
+        features=[
+            Feature(
+                id="fallen_log",
+                name="fallen log",
+                description="A mossy log sprawls across the path.",
+            ),
+            Feature(
+                id="mushroom_patch",
+                name="mushroom patch",
+                description="A cluster of pale mushrooms grows at the log's base.",
+            ),
+        ],
+    )
+
+    field_path = Location(
+        id="field_path",
+        name="Field Path",
+        type="zone",
+        description_template=(
+            "A narrow track cuts between fallow fields of long, yellowed grass. "
+            "The sky is wide open. The farm is visible to the north."
+        ),
+        exits=[
+            Exit(destination="road_south", label="back to the road"),
+            Exit(destination="field_end", label="further along the path"),
+        ],
+        item_ids=[],
+        npc_ids=[],
+        features=[
+            Feature(
+                id="distant_village",
+                name="distant village",
+                description=(
+                    "A smudge of smoke on the horizon hints at a village "
+                    "far to the south."
+                ),
+            ),
+        ],
+    )
+
+    field_end = Location(
+        id="field_end",
+        name="Far End of the Field",
+        type="room",
+        description_template=(
+            "The path peters out here at a crumbling drystone wall. "
+            "Beyond it the land falls away into scrub. "
+            "The farm is a distant shape to the north."
+        ),
+        exits=[
+            Exit(destination="field_path", label="back along the path"),
+        ],
+        item_ids=[],
+        npc_ids=[],
     )
 
     # ------------------------------------------------------------------ #
@@ -240,7 +312,20 @@ def build() -> GameState:
             portable=True,
             state={},
         ),
+        "gnarled_stick": Item(
+            id="gnarled_stick",
+            name="gnarled stick",
+            description="A knotty branch about the length of a walking staff.",
+            portable=True,
+            state={},
+        ),
     }
+
+    # ------------------------------------------------------------------ #
+    # Containers                                                           #
+    # ------------------------------------------------------------------ #
+
+    containers: dict[str, Container] = {}
 
     # ------------------------------------------------------------------ #
     # NPCs                                                                 #
@@ -335,6 +420,9 @@ def build() -> GameState:
             storehouse,
             barn,
             road_south,
+            woods_edge,
+            field_path,
+            field_end,
         ]
     }
 
@@ -344,6 +432,8 @@ def build() -> GameState:
         time=0,
         player_location_id="farmhand_quarters",
         locations=locations,
+        doors=doors,
+        containers=containers,
         npcs=npcs,
         items=items,
         tasks=tasks,

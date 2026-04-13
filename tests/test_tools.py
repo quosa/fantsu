@@ -9,8 +9,11 @@ from fantsu.tools import (
     get_time,
     look,
     move_to,
+    open_container,
     open_portal,
+    put_into,
     record_talk,
+    take_from,
     take_item,
     use_item,
     validate_talk_to,
@@ -78,10 +81,20 @@ def test_open_portal_closed_becomes_open(state: GameState) -> None:
     state.player_location_id = "farmhand_quarters"
     result = open_portal("main_hall", state)
     assert result.ok
-    exits = state.locations["farmhand_quarters"].exits
-    portal = next(e.portal for e in exits if e.destination == "main_hall")
-    assert portal is not None
-    assert portal.state == "open"
+    assert state.doors["wooden_door"].state == "open"
+
+
+def test_door_shared_state_bidirectional(state: GameState) -> None:
+    """Opening a door from one side makes it open from the other side too."""
+    state.player_location_id = "farmhand_quarters"
+    open_portal("main_hall", state)
+    # The door object is shared — the reverse exit must also see it as open
+    reverse_exit = next(
+        e for e in state.locations["main_hall"].exits
+        if e.destination == "farmhand_quarters"
+    )
+    assert reverse_exit.door_id == "wooden_door"
+    assert state.doors[reverse_exit.door_id].state == "open"
 
 
 def test_open_portal_already_open(state: GameState) -> None:
@@ -105,11 +118,8 @@ def test_open_portal_no_portal_on_exit(state: GameState) -> None:
 
 def test_open_portal_locked(state: GameState) -> None:
     state.player_location_id = "yard"
-    # Lock the farm gate
-    exits = state.locations["yard"].exits
-    gate_exit = next(e for e in exits if e.destination == "road_south")
-    assert gate_exit.portal is not None
-    gate_exit.portal.state = "locked"
+    # Lock the farm gate via the shared Door object
+    state.doors["farm_gate"].state = "locked"
 
     result = open_portal("road_south", state)
     assert not result.ok
@@ -125,10 +135,7 @@ def test_close_portal_open_becomes_closed(state: GameState) -> None:
     state.player_location_id = "main_hall"
     result = close_portal("yard", state)
     assert result.ok
-    exits = state.locations["main_hall"].exits
-    portal = next(e.portal for e in exits if e.destination == "yard")
-    assert portal is not None
-    assert portal.state == "closed"
+    assert state.doors["front_door"].state == "closed"
 
 
 def test_close_portal_already_closed(state: GameState) -> None:
@@ -151,12 +158,9 @@ def test_close_portal_no_portal_on_exit(state: GameState) -> None:
 
 
 def test_close_portal_locked(state: GameState) -> None:
-    # A locked portal is already secured — closing it returns "already closed"
+    # A locked door is already secured — closing it returns "already closed"
     state.player_location_id = "yard"
-    exits = state.locations["yard"].exits
-    gate_exit = next(e for e in exits if e.destination == "road_south")
-    assert gate_exit.portal is not None
-    gate_exit.portal.state = "locked"
+    state.doors["farm_gate"].state = "locked"
     result = close_portal("road_south", state)
     assert result.ok
     assert "already closed" in result.message
@@ -428,3 +432,126 @@ def test_get_time_returns_string(state: GameState) -> None:
     assert result.ok
     assert isinstance(result.message, str)
     assert len(result.message) > 0
+
+
+# ------------------------------------------------------------------ #
+# Container helpers — build a minimal state with a chest              #
+# ------------------------------------------------------------------ #
+
+
+def _state_with_chest() -> GameState:
+    """Return a world-built state with a chest added to the storehouse."""
+    from fantsu.state import Container
+
+    s = build()
+    chest = Container(
+        id="old_chest",
+        name="old chest",
+        description="A dusty old chest.",
+        item_ids=["pitchfork"],
+    )
+    s.containers["old_chest"] = chest
+    s.locations["storehouse"].container_ids.append("old_chest")
+    return s
+
+
+# ------------------------------------------------------------------ #
+# open_container                                                       #
+# ------------------------------------------------------------------ #
+
+
+def test_open_container_closed_becomes_open() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    result = open_container("old_chest", s)
+    assert result.ok
+    assert s.containers["old_chest"].state == "open"
+
+
+def test_open_container_already_open() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "open"
+    result = open_container("old_chest", s)
+    assert result.ok
+    assert "already open" in result.message
+
+
+def test_open_container_locked() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "locked"
+    result = open_container("old_chest", s)
+    assert not result.ok
+    assert "locked" in result.message
+
+
+def test_open_container_not_in_scope() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "barn"  # chest is in storehouse
+    result = open_container("old_chest", s)
+    assert not result.ok
+
+
+# ------------------------------------------------------------------ #
+# take_from                                                            #
+# ------------------------------------------------------------------ #
+
+
+def test_take_from_open_container() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "open"
+    result = take_from("old_chest", "pitchfork", s)
+    assert result.ok
+    assert "pitchfork" in s.player_inventory
+    assert "pitchfork" not in s.containers["old_chest"].item_ids
+
+
+def test_take_from_closed_container_blocked() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    result = take_from("old_chest", "pitchfork", s)
+    assert not result.ok
+    assert "closed" in result.message
+
+
+def test_take_from_item_not_in_container() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "open"
+    result = take_from("old_chest", "bucket", s)
+    assert not result.ok
+
+
+# ------------------------------------------------------------------ #
+# put_into                                                             #
+# ------------------------------------------------------------------ #
+
+
+def test_put_into_open_container() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "open"
+    s.player_inventory.append("bucket")
+    result = put_into("bucket", "old_chest", s)
+    assert result.ok
+    assert "bucket" not in s.player_inventory
+    assert "bucket" in s.containers["old_chest"].item_ids
+
+
+def test_put_into_closed_container_blocked() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.player_inventory.append("bucket")
+    result = put_into("bucket", "old_chest", s)
+    assert not result.ok
+    assert "closed" in result.message
+
+
+def test_put_into_not_in_inventory() -> None:
+    s = _state_with_chest()
+    s.player_location_id = "storehouse"
+    s.containers["old_chest"].state = "open"
+    result = put_into("bucket", "old_chest", s)
+    assert not result.ok

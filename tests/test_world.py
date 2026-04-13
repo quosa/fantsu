@@ -23,6 +23,9 @@ def test_all_locations_present(state: GameState) -> None:
         "storehouse",
         "barn",
         "road_south",
+        "woods_edge",
+        "field_path",
+        "field_end",
     }
     assert set(state.locations.keys()) == expected
 
@@ -34,7 +37,10 @@ def test_player_starts_in_farmhand_quarters(state: GameState) -> None:
 def test_location_types(state: GameState) -> None:
     assert state.locations["yard"].type == "zone"
     assert state.locations["road_south"].type == "zone"
+    assert state.locations["field_path"].type == "zone"
     assert state.locations["barn"].type == "room"
+    assert state.locations["woods_edge"].type == "room"
+    assert state.locations["field_end"].type == "room"
 
 
 def test_road_south_has_features(state: GameState) -> None:
@@ -49,22 +55,53 @@ def test_road_south_has_features(state: GameState) -> None:
 # ------------------------------------------------------------------ #
 
 
-def test_farmhand_quarters_has_portal_to_main_hall(state: GameState) -> None:
+def test_farmhand_quarters_has_door_to_main_hall(state: GameState) -> None:
     exits = state.locations["farmhand_quarters"].exits
-    assert any(e.destination == "main_hall" and e.portal is not None for e in exits)
+    assert any(e.destination == "main_hall" and e.door_id is not None for e in exits)
 
 
-def test_main_hall_open_archway_to_kitchen_has_no_portal(state: GameState) -> None:
+def test_main_hall_open_archway_to_kitchen_has_no_door(state: GameState) -> None:
     exits = state.locations["main_hall"].exits
     kitchen_exit = next(e for e in exits if e.destination == "kitchen")
-    assert kitchen_exit.portal is None
+    assert kitchen_exit.door_id is None
 
 
 def test_barn_door_starts_closed(state: GameState) -> None:
-    yard_exits = state.locations["yard"].exits
-    barn_exit = next(e for e in yard_exits if e.destination == "barn")
-    assert barn_exit.portal is not None
-    assert barn_exit.portal.state == "closed"
+    assert state.doors["barn_door"].state == "closed"
+
+
+def test_bidirectional_doors_share_state(state: GameState) -> None:
+    """Both directions of each door reference the same door_id."""
+    fq_exit = next(
+        e for e in state.locations["farmhand_quarters"].exits
+        if e.destination == "main_hall"
+    )
+    mh_exit = next(
+        e for e in state.locations["main_hall"].exits
+        if e.destination == "farmhand_quarters"
+    )
+    assert fq_exit.door_id == mh_exit.door_id == "wooden_door"
+
+
+def test_road_south_connects_to_outdoor_zones(state: GameState) -> None:
+    road_destinations = {e.destination for e in state.locations["road_south"].exits}
+    assert "woods_edge" in road_destinations
+    assert "field_path" in road_destinations
+
+
+def test_road_south_features_are_enterable(state: GameState) -> None:
+    features = state.locations["road_south"].features
+    woods = next(f for f in features if f.id == "dense_woods")
+    fields = next(f for f in features if f.id == "open_fields")
+    assert woods.enterable is True
+    assert woods.destination == "woods_edge"
+    assert fields.enterable is True
+    assert fields.destination == "field_path"
+
+
+def test_woods_edge_has_gnarled_stick(state: GameState) -> None:
+    assert "gnarled_stick" in state.locations["woods_edge"].item_ids
+    assert "gnarled_stick" in state.items
 
 
 # ------------------------------------------------------------------ #
@@ -78,6 +115,7 @@ def test_all_items_present(state: GameState) -> None:
         "feed_sack",
         "pitchfork",
         "player_boots",
+        "gnarled_stick",
     }
 
 

@@ -1,7 +1,7 @@
 import pytest
 
 from fantsu.renderer import describe_inventory, describe_location, format_time
-from fantsu.state import NPC, Exit, Feature, GameState, Item, Location, Portal
+from fantsu.state import NPC, Container, Door, Exit, Feature, GameState, Item, Location
 
 # ------------------------------------------------------------------ #
 # format_time                                                          #
@@ -78,7 +78,7 @@ def test_describe_location_exit_without_portal() -> None:
     assert "Exits:" in text
 
 
-def test_describe_location_exit_with_portal() -> None:
+def test_describe_location_exit_with_door() -> None:
     loc = Location(
         id="farmhand_quarters",
         name="Farmhand's Quarters",
@@ -88,15 +88,20 @@ def test_describe_location_exit_with_portal() -> None:
             Exit(
                 destination="main_hall",
                 label="door to main hall",
-                portal=Portal(
-                    destination="main_hall",
-                    description="wooden door",
-                    state="closed",
-                ),
+                door_id="wooden_door",
             )
         ],
     )
-    text = describe_location(_minimal_state(loc))
+    state = GameState(
+        player_location_id="farmhand_quarters",
+        locations={"farmhand_quarters": loc},
+        doors={
+            "wooden_door": Door(
+                id="wooden_door", description="wooden door", state="closed"
+            )
+        },
+    )
+    text = describe_location(state)
     assert "wooden door" in text
     assert "closed" in text
 
@@ -271,3 +276,131 @@ def test_describe_inventory_with_items() -> None:
     assert "wooden bucket" in text
     assert "pitchfork" in text
     assert "You are carrying:" in text
+
+
+# ------------------------------------------------------------------ #
+# item state labels                                                    #
+# ------------------------------------------------------------------ #
+
+
+def test_item_state_label_shown_when_active() -> None:
+    loc = Location(
+        id="storehouse",
+        name="Storehouse",
+        type="room",
+        description_template="A cool storehouse.",
+        item_ids=["bucket"],
+    )
+    state = GameState(
+        player_location_id="storehouse",
+        locations={"storehouse": loc},
+        items={
+            "bucket": Item(
+                id="bucket",
+                name="wooden bucket",
+                description="A bucket.",
+                state={"filled": True},
+                state_labels={"filled": "filled with grain"},
+            )
+        },
+    )
+    text = describe_location(state)
+    assert "filled with grain" in text
+
+
+def test_item_state_label_hidden_when_inactive() -> None:
+    loc = Location(
+        id="storehouse",
+        name="Storehouse",
+        type="room",
+        description_template="A cool storehouse.",
+        item_ids=["bucket"],
+    )
+    state = GameState(
+        player_location_id="storehouse",
+        locations={"storehouse": loc},
+        items={
+            "bucket": Item(
+                id="bucket",
+                name="wooden bucket",
+                description="A bucket.",
+                state={"filled": False},
+                state_labels={"filled": "filled with grain"},
+            )
+        },
+    )
+    text = describe_location(state)
+    assert "wooden bucket" in text
+    assert "filled with grain" not in text
+
+
+def test_inventory_shows_item_state_label() -> None:
+    state = GameState(
+        player_inventory=["bucket"],
+        items={
+            "bucket": Item(
+                id="bucket",
+                name="wooden bucket",
+                description="A bucket.",
+                state={"filled": True},
+                state_labels={"filled": "filled with grain"},
+            )
+        },
+    )
+    text = describe_inventory(state)
+    assert "filled with grain" in text
+
+
+# ------------------------------------------------------------------ #
+# containers in location                                               #
+# ------------------------------------------------------------------ #
+
+
+def test_container_shown_in_you_see() -> None:
+    loc = Location(
+        id="storehouse",
+        name="Storehouse",
+        type="room",
+        description_template="A cool storehouse.",
+        container_ids=["old_chest"],
+    )
+    state = GameState(
+        player_location_id="storehouse",
+        locations={"storehouse": loc},
+        containers={
+            "old_chest": Container(
+                id="old_chest",
+                name="old chest",
+                description="A dusty chest.",
+            )
+        },
+    )
+    text = describe_location(state)
+    assert "old chest" in text
+    assert "closed" in text
+    assert "You see:" in text
+
+
+def test_open_container_shown_as_open() -> None:
+    loc = Location(
+        id="barn",
+        name="Barn",
+        type="room",
+        description_template="A barn.",
+        container_ids=["tool_box"],
+    )
+    state = GameState(
+        player_location_id="barn",
+        locations={"barn": loc},
+        containers={
+            "tool_box": Container(
+                id="tool_box",
+                name="tool box",
+                description="A wooden box.",
+                state="open",
+            )
+        },
+    )
+    text = describe_location(state)
+    assert "tool box" in text
+    assert "open" in text

@@ -1,6 +1,6 @@
 """Pure string formatting — no I/O, no side effects."""
 
-from fantsu.state import GameState
+from fantsu.state import Container, GameState, Item
 
 
 def format_time(minutes: int) -> str:
@@ -23,6 +23,20 @@ def format_time(minutes: int) -> str:
     return result
 
 
+def _item_label(item: Item) -> str:
+    """Return the item name with any active state annotations."""
+    notes = [label for key, label in item.state_labels.items() if item.state.get(key)]
+    return f"{item.name} ({', '.join(notes)})" if notes else item.name
+
+
+def _container_label(container: Container) -> str:
+    """Return container name with state and contents when open."""
+    if container.state == "open" and container.item_ids:
+        # List contents by name (best-effort; ids without matching items are skipped)
+        return f"{container.name} ({container.state})"
+    return f"{container.name} ({container.state})"
+
+
 def describe_location(state: GameState) -> str:
     """Render the player's current location as readable text."""
     loc = state.locations[state.player_location_id]
@@ -36,19 +50,31 @@ def describe_location(state: GameState) -> str:
     # Exits
     exit_parts: list[str] = []
     for ex in loc.exits:
-        if ex.portal:
-            exit_parts.append(
-                f"{ex.label}: {ex.portal.description} ({ex.portal.state})"
-            )
+        if ex.door_id is not None:
+            door = state.doors.get(ex.door_id)
+            if door is not None:
+                exit_parts.append(
+                    f"{ex.label}: {door.description} ({door.state})"
+                )
+            else:
+                exit_parts.append(ex.label)
         else:
             exit_parts.append(ex.label)
     if exit_parts:
         lines.append("Exits: " + ", ".join(exit_parts))
 
-    # Items on the ground
-    item_names = [state.items[i].name for i in loc.item_ids if i in state.items]
-    if item_names:
-        lines.append("You see: " + ", ".join(item_names))
+    # Items and containers merged into one "You see:" line
+    visible: list[str] = []
+    for i in loc.item_ids:
+        item = state.items.get(i)
+        if item is not None:
+            visible.append(_item_label(item))
+    for cid in loc.container_ids:
+        container = state.containers.get(cid)
+        if container is not None:
+            visible.append(_container_label(container))
+    if visible:
+        lines.append("You see: " + ", ".join(visible))
 
     # NPCs present
     npc_names = [state.npcs[n].name for n in loc.npc_ids if n in state.npcs]
@@ -67,5 +93,9 @@ def describe_inventory(state: GameState) -> str:
     """Render the player's inventory."""
     if not state.player_inventory:
         return "You are carrying nothing."
-    names = [state.items[i].name for i in state.player_inventory if i in state.items]
-    return "You are carrying: " + ", ".join(names)
+    labels: list[str] = []
+    for i in state.player_inventory:
+        item = state.items.get(i)
+        if item is not None:
+            labels.append(_item_label(item))
+    return "You are carrying: " + ", ".join(labels)

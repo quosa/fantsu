@@ -145,6 +145,68 @@ ALL_TOOLS: list[dict[str, object]] = [
     {
         "type": "function",
         "function": {
+            "name": "open_container",
+            "description": (
+                "Open a container (chest, cabinet, drawer, etc.) "
+                "in the current location or a portable container in inventory."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "container_id": {
+                        "type": "string",
+                        "description": "The id of the container to open.",
+                    }
+                },
+                "required": ["container_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "take_from",
+            "description": "Take an item from an open container.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "container_id": {
+                        "type": "string",
+                        "description": "The id of the container to take from.",
+                    },
+                    "item_id": {
+                        "type": "string",
+                        "description": "The id of the item to take.",
+                    },
+                },
+                "required": ["container_id", "item_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "put_into",
+            "description": "Put an item from inventory into an open container.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "item_id": {
+                        "type": "string",
+                        "description": "The id of the item to put into the container.",
+                    },
+                    "container_id": {
+                        "type": "string",
+                        "description": "The id of the container to put the item into.",
+                    },
+                },
+                "required": ["item_id", "container_id"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
             "name": "look",
             "description": "Describe the current location. Does not advance time.",
             "parameters": {"type": "object", "properties": {}, "required": []},
