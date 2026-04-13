@@ -13,6 +13,8 @@ from fantsu.state import GameState
 from fantsu.tools import move_to, open_portal, take_item, use_item
 from fantsu.world import build
 
+from .conftest import MockNPCClient
+
 # ------------------------------------------------------------------ #
 # Playthrough script                                                   #
 # ------------------------------------------------------------------ #
@@ -67,18 +69,6 @@ class ScriptedNarratorClient:
     @property
     def exhausted(self) -> bool:
         return self._index >= len(self._script)
-
-
-class MockNPCClient:
-    """Stub NPC client — process_input requires one even when no NPC is spoken to."""
-
-    def chat(
-        self,
-        model: str,
-        messages: list[dict[str, str]],
-        tools: list[dict[str, object]] | None = None,
-    ) -> dict[str, object]:
-        return {"message": {"content": "Aye."}}
 
 
 # ------------------------------------------------------------------ #

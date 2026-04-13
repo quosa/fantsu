@@ -28,19 +28,22 @@ fantsu/
   prompts.py      system prompt strings — tune here first
   npc.py          LLMClient protocol + NPC dialogue call
   narrator.py     process_input: LLM → tool dispatch → narration
-  groq_client.py  GroqClient — calls Groq cloud API (excluded from mypy)
-  ollama_client.py  OllamaClient — calls local Ollama daemon (excluded from mypy)
+  clients/
+    groq_client.py    GroqClient — Groq cloud API (excluded from mypy)
+    ollama_client.py  OllamaClient — local Ollama daemon (excluded from mypy)
+    z_client.py       ZAIClient — Z.ai cloud API (excluded from mypy)
   main.py         game loop entry point (excluded from mypy)
 
 tests/
   test_state.py / test_world.py / test_renderer.py
   test_tools.py / test_npc.py / test_narrator.py
+  test_llm_player.py  Z.ai integration test (skipped without Z_API_KEY)
 ```
 
 ## Architecture rules
 
 - **No circular imports.** Dependency order:
-  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → groq_client / ollama_client → main`
+  `config → state → renderer → tools → tool_schema → prompts → npc → narrator → world → clients/* → main`
 - **No LLM calls in tests.** `npc.py` and `narrator.py` accept an `LLMClient`
   argument; tests inject `MockLLMClient` / `MockNarratorClient`.
 - **Tools are pure game logic.** They take `GameState`, mutate it in place,
@@ -104,7 +107,7 @@ plan doc. When in doubt, write one — they're cheap and useful later.
 
 - One test file per module
 - Tools are tested by calling them directly with a `build()` state fixture
-- LLM paths are always mocked — `make check` never calls Ollama or Groq
+- LLM paths are always mocked — `make check` never calls Ollama, Groq, or Z.ai
 - Coverage target: 80 %+ on `fantsu/` excluding `main.py`
 
 ## What's intentionally not there yet

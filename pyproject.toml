@@ -11,6 +11,7 @@ dependencies = ["ollama", "openai>=1.0"]
 
 [project.scripts]
 fantsu = "fantsu.main:main"
+fanturer = "fantsu.fanturer:main"
 
 [project.optional-dependencies]
 dev = [
@@ -36,7 +37,13 @@ select = ["E", "F", "I", "UP"]
 python_version = "3.11"
 strict = true
 files = ["fantsu/"]
-exclude = ["fantsu/main\\.py", "fantsu/ollama_client\\.py", "fantsu/groq_client\\.py"]
+exclude = [
+    "fantsu/main\\.py",
+    "fantsu/fanturer\\.py",
+    "fantsu/clients/groq_client\\.py",
+    "fantsu/clients/ollama_client\\.py",
+    "fantsu/clients/z_client\\.py",
+]
 
 [[tool.mypy.overrides]]
 module = "ollama"
