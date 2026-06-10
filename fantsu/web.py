@@ -17,6 +17,7 @@ the local Ollama daemon.
 
 from __future__ import annotations
 
+import inspect
 from dataclasses import dataclass, field
 
 from fantsu import config, world
@@ -138,7 +139,13 @@ def build_app():  # type: ignore[no-untyped-def]
     with gr.Blocks(title="Fantsu") as demo:
         gr.Markdown(INTRO_MARKDOWN)
         session_state = gr.State()
-        chatbot = gr.Chatbot(height=460, label="Fantsu")
+        # gradio 4.27–5.x take type="messages"; gradio 6 removed the arg and
+        # makes the messages (dict) format the default. Pass it only if supported
+        # so the same dict-message handlers work across versions.
+        chatbot_kwargs: dict[str, object] = {"height": 460, "label": "Fantsu"}
+        if "type" in inspect.signature(gr.Chatbot).parameters:
+            chatbot_kwargs["type"] = "messages"
+        chatbot = gr.Chatbot(**chatbot_kwargs)
         msg = gr.Textbox(
             placeholder="What do you do?",
             autofocus=True,

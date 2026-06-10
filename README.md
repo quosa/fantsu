@@ -1,3 +1,20 @@
+---
+title: Fantsu
+emoji: 🌾
+colorFrom: green
+colorTo: yellow
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
+<!--
+The YAML block above is metadata for Hugging Face Spaces (read when this repo's
+README.md is the Space's README). GitHub renders it as a small table at the top.
+sdk_version is intentionally omitted so the Space uses HF's latest gradio; pin it
+in the block above if you want a specific version.
+-->
+
 # Fantsu
 
 A terminal text adventure with LLM-backed NPCs. You type freely; a narrator
