@@ -27,3 +27,22 @@ jobs:
 
       - name: Verify wheel builds
         run: make build
+
+  deploy:
+    # Only after a merge to main, and only if `check` passed. Pull requests run
+    # `check` but never deploy.
+    needs: check
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Deploy to Hugging Face Space
+        run: ./deploy_to_hf.sh
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}

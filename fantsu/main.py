@@ -8,17 +8,7 @@ from fantsu.clients.ollama_client import OllamaClient
 from fantsu.narrator import process_input
 from fantsu.npc import LLMClient
 from fantsu.renderer import describe_location
-
-OPENING_SCENE = """\
-You wake to a sharp knock at your door.
-
-"Up with you!" Aldric's voice, gruff but not unkind. "The animals haven't
-been fed. Take the bucket from the storehouse, fill it with grain, and see
-to the goats and chickens in the barn. There's bread in the kitchen when
-you're done."
-
-His footsteps retreat toward the main hall.
-"""
+from fantsu.scenes import ENDING_TEXT, OPENING_SCENE
 
 
 def main() -> None:
@@ -74,12 +64,7 @@ def main() -> None:
 
         # If every task is done, print the ending and stop
         if state.tasks and all(t.completed for t in state.tasks):
-            print(
-                "\nAldric finds you as you leave the barn. He looks at the "
-                "contented animals and gives a rare nod.\n"
-                '"Good work. There\'s bread and butter waiting in the kitchen."\n'
-                "\nYou have completed all tasks. Well done."
-            )
+            print(f"\n{ENDING_TEXT}")
             break
 
         # Tick NPC schedules after each player action

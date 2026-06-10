@@ -1,3 +1,20 @@
+---
+title: Fantsu
+emoji: 🌾
+colorFrom: green
+colorTo: yellow
+sdk: gradio
+app_file: app.py
+pinned: false
+---
+
+<!--
+The YAML block above is metadata for Hugging Face Spaces (read when this repo's
+README.md is the Space's README). GitHub renders it as a small table at the top.
+sdk_version is intentionally omitted so the Space uses HF's latest gradio; pin it
+in the block above if you want a specific version.
+-->
+
 # Fantsu
 
 A terminal text adventure with LLM-backed NPCs. You type freely; a narrator
@@ -62,6 +79,22 @@ No local installation at all. See **[docs/codespaces_plan.md](docs/codespaces_pl
 1. Add `GROQ_API_KEY` to your [Codespaces secrets](https://github.com/settings/codespaces)
 2. Open this repo → **Code → Codespaces → New codespace**
 3. Run `make run` in the browser terminal
+
+### Option D — Web chat UI (host it online)
+
+A Gradio chat front-end (`fantsu/web.py`) wraps the game for the browser. Run it
+locally:
+
+```bash
+pip install -e ".[web]"
+GROQ_API_KEY=gsk_... python -m fantsu.web   # http://localhost:7860
+```
+
+To host it for friends (free), deploy to **Hugging Face Spaces** with
+`GROQ_API_KEY` as a Space secret — `app.py` and `requirements.txt` are ready.
+See **[docs/web_hosting_plan.md](docs/web_hosting_plan.md)** for the full guide
+(plus Fly.io / Render / Raspberry Pi alternatives, and why GitHub Pages can't
+host this).
 
 ---
 
