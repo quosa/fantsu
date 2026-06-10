@@ -32,6 +32,15 @@ if ! command -v hf >/dev/null 2>&1; then
   pip install -q -U "huggingface_hub[cli]"
 fi
 
+# `--add-to-git-credential` below can only store the token if git has a
+# credential helper configured. Fresh machines and CI runners have none, so
+# `hf auth login` warns and the clone/push fails to authenticate. Configure the
+# "store" helper if (and only if) one isn't already set, leaving existing user
+# config untouched.
+if [[ -z "$(git config --global credential.helper || true)" ]]; then
+  git config --global credential.helper store
+fi
+
 # Authenticate (reads the token from the env var; nothing is printed) and wire it
 # into the git credential helper so the clone/push below can authenticate.
 hf auth login --token "$HF_TOKEN" --add-to-git-credential
