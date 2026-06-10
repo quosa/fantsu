@@ -30,8 +30,13 @@ def main() -> None:
     seen_completed: set[str] = set()
 
     while True:
+        if state.dialogue is not None:
+            partner = state.npcs[state.dialogue.npc_id].name
+            prompt = f"\n[talking to {partner}] > "
+        else:
+            prompt = "\n> "
         try:
-            player_input = input("\n> ").strip()
+            player_input = input(prompt).strip()
         except (EOFError, KeyboardInterrupt):
             print("\nFarewell.")
             break
@@ -67,8 +72,10 @@ def main() -> None:
             print(f"\n{ENDING_TEXT}")
             break
 
-        # Tick NPC schedules after each player action
-        world.tick_npcs(state)
+        # Tick NPC schedules after each player action, but not mid-conversation
+        # so the dialogue partner can't walk off between exchanges.
+        if state.dialogue is None:
+            world.tick_npcs(state)
 
 
 if __name__ == "__main__":

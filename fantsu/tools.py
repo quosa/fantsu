@@ -403,16 +403,6 @@ def validate_talk_to(npc_id: str, state: GameState) -> ToolResult | None:
     return None
 
 
-def record_talk(npc_id: str, dialogue: str, state: GameState) -> None:
-    """Append a dialogue summary to NPC memory and the event log."""
-    npc = state.npcs[npc_id]
-    summary = f'Player spoke to {npc.name}: "{dialogue[:80]}"'
-    npc.memory.append(summary)
-    if len(npc.memory) > config.NPC_MEMORY_LENGTH:
-        npc.memory = npc.memory[-config.NPC_MEMORY_LENGTH :]
-    state.event_log.append(summary)
-
-
 # ------------------------------------------------------------------ #
 # look                                                                 #
 # ------------------------------------------------------------------ #

@@ -272,6 +272,19 @@ def test_process_input_talk_to_present_npc(
     )
     narration, _ = process_input("talk to Aldric", state, narrator, npc_client)
     assert "harvest" in narration
+    assert "Master Aldric:" in narration
+
+
+def test_process_input_talk_to_starts_dialogue(state: GameState) -> None:
+    state.player_location_id = "main_hall"
+    npc_client = MockNPCClient()
+    narrator = MockNarratorClient(
+        tool_calls=[_tool_call("talk_to", {"npc_id": "aldric", "message": "Hello"})]
+    )
+    _, state = process_input("talk to Aldric", state, narrator, npc_client)
+    assert state.dialogue is not None
+    assert state.dialogue.npc_id == "aldric"
+    assert state.dialogue.turns == 1
 
 
 def test_process_input_talk_to_absent_npc_returns_error(
@@ -283,6 +296,56 @@ def test_process_input_talk_to_absent_npc_returns_error(
     )
     narration, _ = process_input("talk to Aldric", state, narrator, npc_client)
     assert "not here" in narration
+    assert state.dialogue is None
+
+
+# ------------------------------------------------------------------ #
+# process_input — active dialogue mode                                 #
+# ------------------------------------------------------------------ #
+
+
+def _start_conversation(state: GameState, npc_client: MockNPCClient) -> GameState:
+    state.player_location_id = "main_hall"
+    narrator = MockNarratorClient(
+        tool_calls=[_tool_call("talk_to", {"npc_id": "aldric", "message": "Hello"})]
+    )
+    _, state = process_input("talk to Aldric", state, narrator, npc_client)
+    return state
+
+
+def test_dialogue_mode_skips_narrator(state: GameState) -> None:
+    npc_client = MockNPCClient("Aye.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    narration, state = process_input("How is the barn?", state, narrator, npc_client)
+    assert narrator.calls == []
+    assert "Master Aldric: Aye." in narration
+    assert state.dialogue is not None
+    assert state.dialogue.turns == 2
+
+
+def test_dialogue_mode_farewell_ends_conversation(state: GameState) -> None:
+    npc_client = MockNPCClient("Go well, then.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    narration, state = process_input("Goodbye!", state, narrator, npc_client)
+    assert state.dialogue is None
+    assert "Go well, then." in narration
+    # The conversation summary was stored as an NPC memory
+    assert state.npcs["aldric"].memory
+
+
+def test_dialogue_mode_turn_cap_ends_conversation(state: GameState) -> None:
+    from fantsu import config
+
+    npc_client = MockNPCClient("Aye.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    for _ in range(config.DIALOGUE_MAX_TURNS - 1):
+        narration, state = process_input("And then?", state, narrator, npc_client)
+    assert state.dialogue is None
+    assert "returns to the day's work" in narration
+    assert narrator.calls == []
 
 
 # ------------------------------------------------------------------ #

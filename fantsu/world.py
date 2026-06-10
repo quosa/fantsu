@@ -12,6 +12,7 @@ from fantsu.state import (
     Location,
     ScheduleEntry,
     Task,
+    WorldFact,
 )
 
 
@@ -349,6 +350,12 @@ def build() -> GameState:
             "Speaks plainly and briefly."
         ),
         disposition="neutral",
+        knowledge=[
+            "crop rotation and when the barley is ready for the scythe",
+            "fair prices for grain and livestock at the village market",
+            "mending barn roofs, fences and gates",
+        ],
+        preoccupation="checking the barn roof before the next rain",
     )
 
     marta = NPC(
@@ -370,6 +377,12 @@ def build() -> GameState:
             "slightly conspiratorial tone."
         ),
         disposition="friendly",
+        knowledge=[
+            "baking, brewing and salting stores through the winter",
+            "every birth, death and marriage on the farms nearby",
+            "keeping the kitchen garden and the hen house",
+        ],
+        preoccupation="getting the bread out and the goose fattened for the fair",
     )
 
     jakob = NPC(
@@ -389,6 +402,12 @@ def build() -> GameState:
             "Gives short answers; warms up only if the player proves useful."
         ),
         disposition="wary",
+        knowledge=[
+            "tending goats, chickens and oxen through every season",
+            "mucking out, haying and the rhythm of field work",
+            "mending tools, harness and drystone walls",
+        ],
+        preoccupation="getting the hay up into the loft before the weather turns",
     )
 
     # ------------------------------------------------------------------ #
@@ -404,6 +423,39 @@ def build() -> GameState:
                 "bucket filled AND use_item(bucket, animals) called in barn"
             ),
         )
+    ]
+
+    # ------------------------------------------------------------------ #
+    # World facts — shared lore injected into NPC prompts on topic match   #
+    # ------------------------------------------------------------------ #
+
+    world_facts = [
+        WorldFact(
+            topic="town fair",
+            keywords=["fair", "town", "market", "village", "greenhollow"],
+            text=(
+                "The Michaelmas fair in the village of Greenhollow is three "
+                "weeks off — wool, pigs and ribbons, and everyone on the farm "
+                "is saving coppers for it."
+            ),
+        ),
+        WorldFact(
+            topic="harvest",
+            keywords=["harvest", "barley", "crop", "crops", "field", "grain"],
+            text=(
+                "The barley stands a month from the scythe; one good dry week "
+                "is all anyone asks of the weather."
+            ),
+        ),
+        WorldFact(
+            topic="neighbours",
+            keywords=["neighbour", "neighbor", "osric", "hilde", "widow"],
+            text=(
+                "The nearest neighbours are Osric's family over the south "
+                "fields and Widow Hilde by the wood; the farms share oxen at "
+                "ploughing time."
+            ),
+        ),
     ]
 
     # ------------------------------------------------------------------ #
@@ -437,6 +489,7 @@ def build() -> GameState:
         npcs=npcs,
         items=items,
         tasks=tasks,
+        world_facts=world_facts,
     )
 
 

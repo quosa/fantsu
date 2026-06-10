@@ -26,8 +26,9 @@ fantsu/
   tools.py        game actions → ToolResult; no LLM calls here
   tool_schema.py  OpenAI-compatible tool-call JSON definitions
   prompts.py      system prompt strings — tune here first
-  npc.py          LLMClient protocol + NPC dialogue call
-  narrator.py     process_input: LLM → tool dispatch → narration
+  npc.py          LLMClient protocol + dialogue system (conversation mode,
+                  summarised memories, keyword-matched world facts)
+  narrator.py     process_input: dialogue routing | LLM → tool dispatch → narration
   clients/
     groq_client.py    GroqClient — Groq cloud API (excluded from mypy)
     ollama_client.py  OllamaClient — local Ollama daemon (excluded from mypy)

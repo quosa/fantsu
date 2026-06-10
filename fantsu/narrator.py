@@ -17,7 +17,13 @@ from fantsu.log import (
     log_tool_result,
     log_turn_end,
 )
-from fantsu.npc import LLMClient, get_response
+from fantsu.npc import (
+    LLMClient,
+    dialogue_turn,
+    end_dialogue,
+    is_farewell,
+    start_dialogue,
+)
 from fantsu.renderer import format_time
 from fantsu.state import GameState
 from fantsu.tools import (
@@ -30,7 +36,6 @@ from fantsu.tools import (
     open_container,
     open_portal,
     put_into,
-    record_talk,
     take_from,
     take_item,
     use_item,
@@ -151,11 +156,10 @@ def _dispatch_tool_call(
         error = validate_talk_to(npc_id, state)
         if error is not None:
             return error
-        dialogue = get_response(
-            npc_id, message, state, npc_client, config.NPC_MODEL
-        )
-        record_talk(npc_id, dialogue, state)
-        return ToolResult(ok=True, message=dialogue)
+        start_dialogue(npc_id, state)
+        reply = dialogue_turn(message, state, npc_client, config.NPC_MODEL)
+        npc = state.npcs[npc_id]
+        return ToolResult(ok=True, message=f"{npc.name}: {reply}")
     if name == "open_container":
         container_id = args.get("container_id")
         if not isinstance(container_id, str):
@@ -225,6 +229,32 @@ def _extract_text(response: dict[str, object]) -> str:
     return str(message)
 
 
+def _process_dialogue_input(
+    player_input: str,
+    state: GameState,
+    npc_client: LLMClient,
+) -> str:
+    """Handle one turn of an active conversation, skipping the narrator."""
+    dialogue = state.dialogue
+    assert dialogue is not None
+    npc = state.npcs[dialogue.npc_id]
+
+    # On a farewell or the final allowed turn, the NPC gets the wrap-up
+    # instruction in the same call, so its last reply reads as a parting line.
+    wrap_up = (
+        is_farewell(player_input)
+        or dialogue.turns + 1 >= config.DIALOGUE_MAX_TURNS
+    )
+    reply = dialogue_turn(
+        player_input, state, npc_client, config.NPC_MODEL, wrap_up=wrap_up
+    )
+    narration = f"{npc.name}: {reply}" if reply else f"{npc.name} says nothing."
+    if wrap_up:
+        end_dialogue(state, npc_client, config.NPC_MODEL)
+        narration += f"\n\n({npc.name} returns to the day's work.)"
+    return narration
+
+
 def process_input(
     player_input: str,
     state: GameState,
@@ -233,6 +263,12 @@ def process_input(
 ) -> tuple[str, GameState]:
     """Interpret player input, execute tools, return narration and updated state."""
     log_player_input(player_input)
+
+    if state.dialogue is not None:
+        narration = _process_dialogue_input(player_input, state, npc_client)
+        log_narration(narration)
+        log_turn_end()
+        return narration, state
 
     context = _build_context(state)
     messages: list[dict[str, str]] = [

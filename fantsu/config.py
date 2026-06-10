@@ -14,3 +14,17 @@ OLLAMA_URL = "http://localhost:11434"  # kept for ollama_client.py compatibility
 TIME_PER_ROOM_ACTION = 2  # minutes advanced per room-level action
 TIME_PER_ZONE_TRAVERSAL = 5  # minutes advanced per zone traversal
 NPC_MEMORY_LENGTH = 10  # max entries kept in NPC memory
+
+DIALOGUE_MAX_TURNS = 6  # exchanges before the NPC excuses itself to its chores
+# Word-boundary matched against player input; any hit ends the conversation.
+FAREWELL_PHRASES = (
+    "goodbye",
+    "farewell",
+    "bye",
+    "see you",
+    "never mind",
+    "i must go",
+    "must be off",
+    "stop talking",
+    "leave you to it",
+)

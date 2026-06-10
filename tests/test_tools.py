@@ -12,7 +12,6 @@ from fantsu.tools import (
     open_container,
     open_portal,
     put_into,
-    record_talk,
     take_from,
     take_item,
     use_item,
@@ -387,22 +386,6 @@ def test_validate_talk_to_unknown_npc(state: GameState) -> None:
     error = validate_talk_to("ghost", state)
     assert error is not None
     assert not error.ok
-
-
-# ------------------------------------------------------------------ #
-# record_talk                                                          #
-# ------------------------------------------------------------------ #
-
-
-def test_record_talk_appends_memory(state: GameState) -> None:
-    record_talk("aldric", "Good morning, sir.", state)
-    assert any("Good morning" in m for m in state.npcs["aldric"].memory)
-
-
-def test_record_talk_trims_memory_to_limit(state: GameState) -> None:
-    for i in range(15):
-        record_talk("aldric", f"Message {i}", state)
-    assert len(state.npcs["aldric"].memory) <= 10
 
 
 # ------------------------------------------------------------------ #

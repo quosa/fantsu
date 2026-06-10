@@ -125,7 +125,11 @@ ALL_TOOLS: list[dict[str, object]] = [
         "type": "function",
         "function": {
             "name": "talk_to",
-            "description": "Speak to an NPC in the same location as the player.",
+            "description": (
+                "Start a conversation with an NPC in the same location as the "
+                "player. Further player input continues the conversation until "
+                "the player says farewell."
+            ),
             "parameters": {
                 "type": "object",
                 "properties": {
