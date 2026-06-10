@@ -63,6 +63,22 @@ No local installation at all. See **[docs/codespaces_plan.md](docs/codespaces_pl
 2. Open this repo → **Code → Codespaces → New codespace**
 3. Run `make run` in the browser terminal
 
+### Option D — Web chat UI (host it online)
+
+A Gradio chat front-end (`fantsu/web.py`) wraps the game for the browser. Run it
+locally:
+
+```bash
+pip install -e ".[web]"
+GROQ_API_KEY=gsk_... python -m fantsu.web   # http://localhost:7860
+```
+
+To host it for friends (free), deploy to **Hugging Face Spaces** with
+`GROQ_API_KEY` as a Space secret — `app.py` and `requirements.txt` are ready.
+See **[docs/web_hosting_plan.md](docs/web_hosting_plan.md)** for the full guide
+(plus Fly.io / Render / Raspberry Pi alternatives, and why GitHub Pages can't
+host this).
+
 ---
 
 ## How to play

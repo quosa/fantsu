@@ -14,6 +14,7 @@ fantsu = "fantsu.main:main"
 fanturer = "fantsu.fanturer:main"
 
 [project.optional-dependencies]
+web = ["gradio>=5.0"]
 dev = [
     "pytest>=8.0",
     "pytest-cov>=5.0",
@@ -39,6 +40,7 @@ strict = true
 files = ["fantsu/"]
 exclude = [
     "fantsu/main\\.py",
+    "fantsu/web\\.py",
     "fantsu/fanturer\\.py",
     "fantsu/clients/groq_client\\.py",
     "fantsu/clients/ollama_client\\.py",
@@ -47,6 +49,10 @@ exclude = [
 
 [[tool.mypy.overrides]]
 module = "ollama"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "gradio"
 ignore_missing_imports = true
 
 [dependency-groups]
