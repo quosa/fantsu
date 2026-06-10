@@ -79,7 +79,9 @@ def play_turn(
     if session.state.tasks and all(t.completed for t in session.state.tasks):
         parts.append(ENDING_TEXT)
         session.over = True
-    else:
+    elif session.state.dialogue is None:
+        # As in main.py: don't tick schedules mid-conversation, so the
+        # dialogue partner can't walk off between exchanges.
         world.tick_npcs(session.state)
 
     return "\n\n".join(parts)
