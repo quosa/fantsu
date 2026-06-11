@@ -6,8 +6,9 @@ Z_API_KEY: str = os.environ.get("Z_API_KEY", "")
 
 # Per-backend model names. The active NARRATOR_MODEL / NPC_MODEL pair is
 # picked below; integration tests address a specific backend's constants.
-OPENROUTER_NARRATOR_MODEL = "google/gemini-2.5-flash-lite"  # cheap, solid tool use
-OPENROUTER_NPC_MODEL = "google/gemini-2.5-flash-lite"
+OPENROUTER_NARRATOR_MODEL = "google/gemini-2.5-flash"  # stronger tool use; lite
+# sometimes returns an empty response ("Nothing happens.")
+OPENROUTER_NPC_MODEL = "google/gemini-2.5-flash-lite"  # plain chat, cheap is fine
 GROQ_NARRATOR_MODEL = "llama-3.3-70b-versatile"  # reliable tool-use support
 GROQ_NPC_MODEL = "llama-3.1-8b-instant"  # fast chat model, no tool use needed
 OLLAMA_MODEL = "qwen3:8b"

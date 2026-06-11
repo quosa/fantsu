@@ -35,7 +35,7 @@ The backend is selected automatically at startup (first match wins):
 
 | Env var set | Backend used |
 |---|---|
-| `OPENROUTER_API_KEY` | OpenRouter cloud API (model: `google/gemini-2.5-flash-lite`) |
+| `OPENROUTER_API_KEY` | OpenRouter cloud API (narrator: `google/gemini-2.5-flash`, NPCs: `google/gemini-2.5-flash-lite`) |
 | `GROQ_API_KEY` | Groq cloud API (no local model needed) |
 | neither | Local Ollama (`http://localhost:11434`, model: `mistral`) |
 

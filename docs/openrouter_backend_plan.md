@@ -25,7 +25,8 @@ Add a third backend with the highest selection priority:
    The module is mypy-excluded like the other clients.
 2. **`fantsu/config.py`** — backend auto-selection becomes a chain:
    `OPENROUTER_API_KEY` set → OpenRouter with
-   `google/gemini-2.5-flash-lite` for both narrator and NPCs; else
+   `google/gemini-2.5-flash` for the narrator and
+   `google/gemini-2.5-flash-lite` for NPCs; else
    `GROQ_API_KEY` set → Groq (unchanged models); else Ollama.
 3. **`fantsu/main.py` / `fantsu/web.py`** — the client-construction
    branches gain an OpenRouter case ahead of Groq, mirroring the config
@@ -47,9 +48,12 @@ Add a third backend with the highest selection priority:
   URL** — would tangle Groq's error-recovery quirks into a generic
   client and make per-backend tuning awkward. A small dedicated class
   matches the existing one-file-per-backend pattern.
-- **Separate narrator/NPC models on OpenRouter** — Gemini 2.5 Flash
-  Lite is cheap and handles both tool use and chat well; one model
-  keeps config simple. Easy to split later in `config.py`.
+- **Gemini 2.5 Flash Lite for the narrator** — tried first for cost,
+  but playtesting showed it sometimes returns an empty response (no
+  tool calls, no text), which surfaces as the "Nothing happens."
+  fallback. The narrator now uses the stronger `google/gemini-2.5-flash`;
+  NPCs stay on Flash Lite since plain dialogue doesn't trigger the
+  issue.
 
 ## Verification
 
