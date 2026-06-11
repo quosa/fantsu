@@ -69,10 +69,16 @@ People nearby: {nearby}
 Your recent memories:
 {memory}
 
+Tasks you have set the new hand, still unfinished:
+{open_tasks}
+
 Stay in character. Speak naturally, not in modern idiom.
 Answer briefly — one or two sentences, three at most. There is always a
 chore waiting, and your mind drifts to it.
-You may hint at tasks, rumours, or needs — but do not break character.\
+If you have unfinished tasks listed above, keep the new hand pointed at
+those — do not pile on more. You may share rumours, news, or worries, but
+do NOT invent new chores, errands, or quests for the player to carry out:
+the tasks listed above are the only work that counts.\
 """
 
 NPC_FACTS_TEMPLATE = """\

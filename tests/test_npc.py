@@ -114,6 +114,32 @@ def test_system_prompt_memory_capped_at_five(state: GameState) -> None:
     assert "Event 0" not in prompt
 
 
+def test_system_prompt_lists_givers_open_tasks(state: GameState) -> None:
+    # Aldric gave the feed_animals task; it must surface so he doesn't invent
+    # a different, uncompletable chore.
+    prompt = build_npc_system_prompt("aldric", state)
+    assert "Feed the goats and chickens in the barn" in prompt
+
+
+def test_system_prompt_omits_completed_tasks(state: GameState) -> None:
+    for task in state.tasks:
+        if task.giver_id == "aldric":
+            task.completed = True
+    prompt = build_npc_system_prompt("aldric", state)
+    assert "Feed the goats and chickens in the barn" not in prompt
+
+
+def test_system_prompt_omits_other_givers_tasks(state: GameState) -> None:
+    # Marta did not set the feed_animals task, so it must not appear for her.
+    prompt = build_npc_system_prompt("marta", state)
+    assert "Feed the goats and chickens in the barn" not in prompt
+
+
+def test_system_prompt_discourages_inventing_tasks(state: GameState) -> None:
+    prompt = build_npc_system_prompt("aldric", state)
+    assert "do NOT invent new chores" in prompt
+
+
 def test_system_prompt_contains_worldview(state: GameState) -> None:
     prompt = build_npc_system_prompt("aldric", state)
     assert "never travelled" in prompt

@@ -98,6 +98,16 @@ def build_npc_system_prompt(
     knowledge_text = (
         "\n".join(f"- {k}" for k in npc.knowledge) if npc.knowledge else "(none)"
     )
+    open_tasks = [
+        task
+        for task in state.tasks
+        if task.giver_id == npc_id and not task.completed
+    ]
+    open_tasks_text = (
+        "\n".join(f"- {task.description}" for task in open_tasks)
+        if open_tasks
+        else "(none)"
+    )
     prompt = prompts.NPC_SYSTEM_TEMPLATE.format(
         name=npc.name,
         occupation=npc.occupation,
@@ -109,6 +119,7 @@ def build_npc_system_prompt(
         location_name=location.name,
         nearby=_nearby_names(npc_id, state),
         memory=memory_text,
+        open_tasks=open_tasks_text,
     )
     facts = relevant_facts(player_message, state) if player_message else []
     if facts:
