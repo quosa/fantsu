@@ -36,6 +36,7 @@ from fantsu.tools import (
     open_container,
     open_portal,
     put_into,
+    resolve_npc_id,
     take_from,
     take_item,
     use_item,
@@ -97,12 +98,22 @@ def _build_context(state: GameState) -> str:
                 container_parts.append(f"{c.name} ({c.state}, id={cid})")
     containers_text = ", ".join(container_parts) if container_parts else "none"
 
+    # List NPCs co-located with the player, with ids, so the model passes the
+    # correct npc_id to talk_to instead of inventing one from the display name.
+    npc_parts = [
+        f"{npc.name} (id={nid})"
+        for nid, npc in state.npcs.items()
+        if npc.location_id == state.player_location_id
+    ]
+    npcs_text = ", ".join(npc_parts) if npc_parts else "no one"
+
     return (
         f"Time: {format_time(state.time)}\n"
         f"Location: {loc_name}\n"
         f"Exits: {exits_text}\n"
         f"Items here: {ground_text}\n"
         f"Containers here: {containers_text}\n"
+        f"NPCs here: {npcs_text}\n"
         f"Carrying: {inventory_text}\n"
         f"Recent events:\n{events_text}"
     )
@@ -153,12 +164,15 @@ def _dispatch_tool_call(
         message = args.get("message")
         if not isinstance(npc_id, str) or not isinstance(message, str):
             return ToolResult(ok=False, message="talk_to requires npc_id and message.")
-        error = validate_talk_to(npc_id, state)
+        resolved = resolve_npc_id(npc_id, state)
+        if resolved is None:
+            return ToolResult(ok=False, message=f"There is no one called '{npc_id}'.")
+        error = validate_talk_to(resolved, state)
         if error is not None:
             return error
-        start_dialogue(npc_id, state)
+        start_dialogue(resolved, state)
         reply = dialogue_turn(message, state, npc_client, config.NPC_MODEL)
-        npc = state.npcs[npc_id]
+        npc = state.npcs[resolved]
         return ToolResult(ok=True, message=f"{npc.name}: {reply}")
     if name == "open_container":
         container_id = args.get("container_id")

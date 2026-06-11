@@ -12,6 +12,7 @@ from fantsu.tools import (
     open_container,
     open_portal,
     put_into,
+    resolve_npc_id,
     take_from,
     take_item,
     use_item,
@@ -386,6 +387,31 @@ def test_validate_talk_to_unknown_npc(state: GameState) -> None:
     error = validate_talk_to("ghost", state)
     assert error is not None
     assert not error.ok
+
+
+# ------------------------------------------------------------------ #
+# resolve_npc_id                                                       #
+# ------------------------------------------------------------------ #
+
+
+def test_resolve_npc_id_exact(state: GameState) -> None:
+    assert resolve_npc_id("aldric", state) == "aldric"
+
+
+def test_resolve_npc_id_from_display_name(state: GameState) -> None:
+    # The narrator model invents an id from the display name "Master Aldric".
+    assert resolve_npc_id("Master_Aldric", state) == "aldric"
+    assert resolve_npc_id("master aldric", state) == "aldric"
+
+
+def test_resolve_npc_id_from_name_word(state: GameState) -> None:
+    # A bare "Aldric" (a word of the display name) still resolves.
+    assert resolve_npc_id("Aldric", state) == "aldric"
+
+
+def test_resolve_npc_id_unknown(state: GameState) -> None:
+    assert resolve_npc_id("ghost", state) is None
+    assert resolve_npc_id("", state) is None
 
 
 # ------------------------------------------------------------------ #

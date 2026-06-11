@@ -390,6 +390,40 @@ def put_into(item_id: str, container_id: str, state: GameState) -> ToolResult:
 # ------------------------------------------------------------------ #
 
 
+def _normalize_npc_ref(ref: str) -> str:
+    """Lowercase and treat underscores as spaces, so 'Master_Aldric' and
+    'master aldric' compare equal."""
+    return ref.replace("_", " ").strip().lower()
+
+
+def resolve_npc_id(ref: str, state: GameState) -> str | None:
+    """Resolve a loosely-specified NPC reference to a canonical npc id.
+
+    The narrator model only sees NPC display names, so it tends to invent ids
+    like 'Master_Aldric' from the name. Match the reference against each NPC's
+    id, full display name, and individual name words (case-insensitively,
+    tolerant of underscores). When several NPCs match, prefer one co-located
+    with the player.
+    """
+    if ref in state.npcs:
+        return ref
+    target = _normalize_npc_ref(ref)
+    if not target:
+        return None
+    matches: list[str] = []
+    for npc_id, npc in state.npcs.items():
+        candidates = {_normalize_npc_ref(npc_id), _normalize_npc_ref(npc.name)}
+        candidates.update(_normalize_npc_ref(npc.name).split())
+        if target in candidates:
+            matches.append(npc_id)
+    if not matches:
+        return None
+    if len(matches) == 1:
+        return matches[0]
+    here = [m for m in matches if state.npcs[m].location_id == state.player_location_id]
+    return here[0] if here else matches[0]
+
+
 def validate_talk_to(npc_id: str, state: GameState) -> ToolResult | None:
     """Return an error ToolResult if the NPC cannot be talked to, else None."""
     npc = state.npcs.get(npc_id)

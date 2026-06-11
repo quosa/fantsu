@@ -135,7 +135,10 @@ ALL_TOOLS: list[dict[str, object]] = [
                 "properties": {
                     "npc_id": {
                         "type": "string",
-                        "description": "The id of the NPC to talk to.",
+                        "description": (
+                            "The id of the NPC to talk to, taken from the "
+                            "'NPCs here' line of the context (e.g. aldric)."
+                        ),
                     },
                     "message": {
                         "type": "string",
