@@ -31,12 +31,13 @@ the landowner, and figure out how to complete it.
 - Python 3.11+
 - **Either** a free [Groq](https://console.groq.com) API key **or** [Ollama](https://ollama.com/download) running locally
 
-The backend is selected automatically at startup:
+The backend is selected automatically at startup (first match wins):
 
-| `GROQ_API_KEY` set? | Backend used |
+| Env var set | Backend used |
 |---|---|
-| Yes | Groq cloud API (no local model needed) |
-| No / empty | Local Ollama (`http://localhost:11434`, model: `mistral`) |
+| `OPENROUTER_API_KEY` | OpenRouter cloud API (model: `google/gemini-2.5-flash-lite`) |
+| `GROQ_API_KEY` | Groq cloud API (no local model needed) |
+| neither | Local Ollama (`http://localhost:11434`, model: `mistral`) |
 
 ---
 
