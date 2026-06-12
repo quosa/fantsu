@@ -71,6 +71,19 @@ def test_play_turn_announces_completed_task_and_ends() -> None:
         assert task.id in session.seen_completed
 
 
+def test_play_turn_skips_npc_tick_during_dialogue() -> None:
+    session = new_session()
+    # Open a conversation with Jakob, then advance time so his schedule
+    # would normally move him out of the barn on the next tick.
+    from fantsu.npc import start_dialogue
+
+    start_dialogue("jakob", session.state)
+    session.state.time = 600
+    before = session.state.npcs["jakob"].location_id
+    play_turn("how goes it?", session, MockNarratorClient(), MockNPCClient())
+    assert session.state.npcs["jakob"].location_id == before
+
+
 def test_play_turn_is_noop_after_game_over() -> None:
     session = new_session()
     session.over = True

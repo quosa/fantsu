@@ -80,6 +80,32 @@ class NPC:
     memory: list[str] = field(default_factory=list)
     profile: str = ""
     disposition: str = "neutral"
+    knowledge: list[str] = field(default_factory=list)
+    preoccupation: str = ""
+
+
+@dataclass
+class WorldFact:
+    """Shared lore injected into NPC prompts when the topic comes up."""
+
+    topic: str
+    keywords: list[str]
+    text: str
+
+
+@dataclass
+class DialogueLine:
+    speaker: Literal["player", "npc"]
+    text: str
+
+
+@dataclass
+class DialogueState:
+    """An active player–NPC conversation."""
+
+    npc_id: str
+    transcript: list[DialogueLine] = field(default_factory=list)
+    turns: int = 0
 
 
 @dataclass
@@ -103,3 +129,5 @@ class GameState:
     items: dict[str, Item] = field(default_factory=dict)
     tasks: list[Task] = field(default_factory=list)
     event_log: list[str] = field(default_factory=list)
+    world_facts: list[WorldFact] = field(default_factory=list)
+    dialogue: DialogueState | None = None

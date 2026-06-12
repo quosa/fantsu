@@ -30,11 +30,36 @@ requires_groq = pytest.mark.skipif(
 )
 
 
+def skip_on_rate_limit(fn):  # type: ignore[no-untyped-def]
+    """Skip (not fail) when the shared Groq quota is exhausted — the test
+    proves nothing about the code in that case."""
+    import functools
+
+    @functools.wraps(fn)
+    def wrapper(*args, **kwargs):  # type: ignore[no-untyped-def]
+        from openai import RateLimitError
+
+        try:
+            return fn(*args, **kwargs)
+        except RateLimitError as exc:
+            pytest.skip(f"Groq rate limit reached: {exc}")
+
+    return wrapper
+
+
 @pytest.fixture()
 def client():  # type: ignore[return]
     from fantsu.clients.groq_client import GroqClient
 
     return GroqClient()
+
+
+@pytest.fixture()
+def groq_models(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Pin the active models to Groq's, even when another backend's key
+    (e.g. OPENROUTER_API_KEY) is also set and won the config auto-selection."""
+    monkeypatch.setattr(config, "NARRATOR_MODEL", config.GROQ_NARRATOR_MODEL)
+    monkeypatch.setattr(config, "NPC_MODEL", config.GROQ_NPC_MODEL)
 
 
 @pytest.fixture()
@@ -203,7 +228,8 @@ def test_bad_request_recovery_unwrapped_body() -> None:
 
 
 @requires_groq
-def test_basic_chat_returns_text(client) -> None:  # type: ignore[no-untyped-def]
+@skip_on_rate_limit
+def test_basic_chat_returns_text(client, groq_models) -> None:  # type: ignore[no-untyped-def]
     """GroqClient returns a non-empty text response for a plain message."""
     response = client.chat(
         model=config.NPC_MODEL,
@@ -217,7 +243,8 @@ def test_basic_chat_returns_text(client) -> None:  # type: ignore[no-untyped-def
 
 
 @requires_groq
-def test_move_to_tool_is_called_for_kitchen(client) -> None:  # type: ignore[no-untyped-def]
+@skip_on_rate_limit
+def test_move_to_tool_is_called_for_kitchen(client, groq_models) -> None:  # type: ignore[no-untyped-def]
     """move_to is invoked with location_id='kitchen' when explicitly instructed.
 
     The prompt names the tool and the destination directly so the model has
@@ -262,8 +289,9 @@ def test_move_to_tool_is_called_for_kitchen(client) -> None:  # type: ignore[no-
 
 
 @requires_groq
+@skip_on_rate_limit
 def test_open_door_and_go_to_main_hall_does_not_raise(  # type: ignore[no-untyped-def]
-    client, state
+    client, state, groq_models
 ) -> None:
     """Regression: open door + move must not raise a Groq 400 error.
 
@@ -283,7 +311,8 @@ def test_open_door_and_go_to_main_hall_does_not_raise(  # type: ignore[no-untype
 
 
 @requires_groq
-def test_sequential_commands_do_not_raise(client, state) -> None:  # type: ignore[no-untyped-def]
+@skip_on_rate_limit
+def test_sequential_commands_do_not_raise(client, state, groq_models) -> None:  # type: ignore[no-untyped-def]
     """Each command in a short play session returns a non-empty narration."""
     from fantsu.narrator import process_input
 

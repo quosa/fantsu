@@ -160,6 +160,29 @@ def test_jakob_starts_in_barn(state: GameState) -> None:
     assert state.npcs["jakob"].location_id == "barn"
 
 
+def test_all_npcs_have_knowledge_and_preoccupation(state: GameState) -> None:
+    for npc in state.npcs.values():
+        assert npc.knowledge, f"{npc.id} has no knowledge entries"
+        assert npc.preoccupation, f"{npc.id} has no preoccupation"
+
+
+# ------------------------------------------------------------------ #
+# World facts                                                          #
+# ------------------------------------------------------------------ #
+
+
+def test_world_facts_cover_fair_and_harvest(state: GameState) -> None:
+    topics = {f.topic for f in state.world_facts}
+    assert "town fair" in topics
+    assert "harvest" in topics
+
+
+def test_world_facts_have_keywords(state: GameState) -> None:
+    for fact in state.world_facts:
+        assert fact.keywords
+        assert fact.text
+
+
 # ------------------------------------------------------------------ #
 # NPC schedule                                                         #
 # ------------------------------------------------------------------ #

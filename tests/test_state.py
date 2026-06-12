@@ -4,6 +4,8 @@ import json
 from fantsu.state import (
     NPC,
     Container,
+    DialogueLine,
+    DialogueState,
     Door,
     Exit,
     Feature,
@@ -12,6 +14,7 @@ from fantsu.state import (
     Location,
     ScheduleEntry,
     Task,
+    WorldFact,
 )
 
 
@@ -97,6 +100,20 @@ def test_npc_defaults():
     assert npc.relationships == {}
     assert npc.disposition == "neutral"
     assert npc.profile == ""
+    assert npc.knowledge == []
+    assert npc.preoccupation == ""
+
+
+def test_dialogue_state_defaults():
+    d = DialogueState(npc_id="aldric")
+    assert d.transcript == []
+    assert d.turns == 0
+
+
+def test_world_fact_fields():
+    f = WorldFact(topic="fair", keywords=["fair"], text="The fair is soon.")
+    assert f.topic == "fair"
+    assert f.keywords == ["fair"]
 
 
 def test_task_defaults():
@@ -117,6 +134,8 @@ def test_game_state_defaults():
     assert state.items == {}
     assert state.tasks == []
     assert state.event_log == []
+    assert state.world_facts == []
+    assert state.dialogue is None
 
 
 def test_game_state_json_round_trip():
@@ -164,6 +183,17 @@ def test_game_state_json_round_trip():
             Task(id="feed_animals", description="Feed the animals.", giver_id="aldric")
         ],
         event_log=["Game started."],
+        world_facts=[
+            WorldFact(topic="fair", keywords=["fair"], text="The fair is soon.")
+        ],
+        dialogue=DialogueState(
+            npc_id="jakob",
+            transcript=[
+                DialogueLine(speaker="player", text="Morning."),
+                DialogueLine(speaker="npc", text="Aye."),
+            ],
+            turns=1,
+        ),
     )
 
     raw = dataclasses.asdict(state)
@@ -181,3 +211,7 @@ def test_game_state_json_round_trip():
     assert restored["npcs"]["jakob"]["memory"] == ["Player arrived."]
     assert restored["tasks"][0]["completed"] is False
     assert restored["event_log"] == ["Game started."]
+    assert restored["world_facts"][0]["topic"] == "fair"
+    assert restored["dialogue"]["npc_id"] == "jakob"
+    assert restored["dialogue"]["transcript"][0]["speaker"] == "player"
+    assert restored["dialogue"]["turns"] == 1

@@ -143,6 +143,21 @@ def test_build_context_shows_inventory_items_with_ids(state: GameState) -> None:
     assert "id=bucket" in ctx
 
 
+def test_build_context_shows_present_npcs_with_ids(state: GameState) -> None:
+    # The model only knows an NPC's id if the context exposes it; otherwise it
+    # invents one from the display name and talk_to fails.
+    state.player_location_id = "main_hall"
+    ctx = build_context(state)
+    assert "id=aldric" in ctx
+    assert "Master Aldric" in ctx
+
+
+def test_build_context_npcs_absent_when_alone(state: GameState) -> None:
+    # Player starts in farmhand_quarters, where no NPC stands.
+    ctx = build_context(state)
+    assert "NPCs here: no one" in ctx
+
+
 def test_build_context_ground_items_absent_when_empty(state: GameState) -> None:
     # Move player to a location with no items
     state.player_location_id = "main_hall"
@@ -272,6 +287,39 @@ def test_process_input_talk_to_present_npc(
     )
     narration, _ = process_input("talk to Aldric", state, narrator, npc_client)
     assert "harvest" in narration
+    assert "Master Aldric:" in narration
+
+
+def test_process_input_talk_to_starts_dialogue(state: GameState) -> None:
+    state.player_location_id = "main_hall"
+    npc_client = MockNPCClient()
+    narrator = MockNarratorClient(
+        tool_calls=[_tool_call("talk_to", {"npc_id": "aldric", "message": "Hello"})]
+    )
+    _, state = process_input("talk to Aldric", state, narrator, npc_client)
+    assert state.dialogue is not None
+    assert state.dialogue.npc_id == "aldric"
+    assert state.dialogue.turns == 1
+
+
+def test_process_input_talk_to_resolves_fabricated_id(state: GameState) -> None:
+    # Reproduces the hall bug: the narrator passes 'Master_Aldric' (invented
+    # from the display name) instead of the real id 'aldric'. The resolver
+    # must recover rather than report "no one called 'Master_Aldric'".
+    state.player_location_id = "main_hall"
+    npc_client = MockNPCClient("Aye, well met.")
+    narrator = MockNarratorClient(
+        tool_calls=[
+            _tool_call("talk_to", {"npc_id": "Master_Aldric", "message": "Hello"})
+        ]
+    )
+    narration, state = process_input(
+        "talk to Master Aldric", state, narrator, npc_client
+    )
+    assert "Master Aldric:" in narration
+    assert "no one called" not in narration
+    assert state.dialogue is not None
+    assert state.dialogue.npc_id == "aldric"
 
 
 def test_process_input_talk_to_absent_npc_returns_error(
@@ -283,6 +331,56 @@ def test_process_input_talk_to_absent_npc_returns_error(
     )
     narration, _ = process_input("talk to Aldric", state, narrator, npc_client)
     assert "not here" in narration
+    assert state.dialogue is None
+
+
+# ------------------------------------------------------------------ #
+# process_input — active dialogue mode                                 #
+# ------------------------------------------------------------------ #
+
+
+def _start_conversation(state: GameState, npc_client: MockNPCClient) -> GameState:
+    state.player_location_id = "main_hall"
+    narrator = MockNarratorClient(
+        tool_calls=[_tool_call("talk_to", {"npc_id": "aldric", "message": "Hello"})]
+    )
+    _, state = process_input("talk to Aldric", state, narrator, npc_client)
+    return state
+
+
+def test_dialogue_mode_skips_narrator(state: GameState) -> None:
+    npc_client = MockNPCClient("Aye.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    narration, state = process_input("How is the barn?", state, narrator, npc_client)
+    assert narrator.calls == []
+    assert "Master Aldric: Aye." in narration
+    assert state.dialogue is not None
+    assert state.dialogue.turns == 2
+
+
+def test_dialogue_mode_farewell_ends_conversation(state: GameState) -> None:
+    npc_client = MockNPCClient("Go well, then.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    narration, state = process_input("Goodbye!", state, narrator, npc_client)
+    assert state.dialogue is None
+    assert "Go well, then." in narration
+    # The conversation summary was stored as an NPC memory
+    assert state.npcs["aldric"].memory
+
+
+def test_dialogue_mode_turn_cap_ends_conversation(state: GameState) -> None:
+    from fantsu import config
+
+    npc_client = MockNPCClient("Aye.")
+    state = _start_conversation(state, npc_client)
+    narrator = MockNarratorClient()
+    for _ in range(config.DIALOGUE_MAX_TURNS - 1):
+        narration, state = process_input("And then?", state, narrator, npc_client)
+    assert state.dialogue is None
+    assert "returns to the day's work" in narration
+    assert narrator.calls == []
 
 
 # ------------------------------------------------------------------ #

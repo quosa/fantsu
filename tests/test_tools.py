@@ -12,7 +12,7 @@ from fantsu.tools import (
     open_container,
     open_portal,
     put_into,
-    record_talk,
+    resolve_npc_id,
     take_from,
     take_item,
     use_item,
@@ -390,19 +390,28 @@ def test_validate_talk_to_unknown_npc(state: GameState) -> None:
 
 
 # ------------------------------------------------------------------ #
-# record_talk                                                          #
+# resolve_npc_id                                                       #
 # ------------------------------------------------------------------ #
 
 
-def test_record_talk_appends_memory(state: GameState) -> None:
-    record_talk("aldric", "Good morning, sir.", state)
-    assert any("Good morning" in m for m in state.npcs["aldric"].memory)
+def test_resolve_npc_id_exact(state: GameState) -> None:
+    assert resolve_npc_id("aldric", state) == "aldric"
 
 
-def test_record_talk_trims_memory_to_limit(state: GameState) -> None:
-    for i in range(15):
-        record_talk("aldric", f"Message {i}", state)
-    assert len(state.npcs["aldric"].memory) <= 10
+def test_resolve_npc_id_from_display_name(state: GameState) -> None:
+    # The narrator model invents an id from the display name "Master Aldric".
+    assert resolve_npc_id("Master_Aldric", state) == "aldric"
+    assert resolve_npc_id("master aldric", state) == "aldric"
+
+
+def test_resolve_npc_id_from_name_word(state: GameState) -> None:
+    # A bare "Aldric" (a word of the display name) still resolves.
+    assert resolve_npc_id("Aldric", state) == "aldric"
+
+
+def test_resolve_npc_id_unknown(state: GameState) -> None:
+    assert resolve_npc_id("ghost", state) is None
+    assert resolve_npc_id("", state) is None
 
 
 # ------------------------------------------------------------------ #

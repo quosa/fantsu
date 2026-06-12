@@ -11,8 +11,8 @@ The Gradio glue (``build_app`` / ``main``) imports ``gradio`` lazily so that
     pip install -e ".[web]"
     GROQ_API_KEY=gsk_... python -m fantsu.web
 
-Backend selection mirrors ``main.py``: Groq if ``GROQ_API_KEY`` is set, else
-the local Ollama daemon.
+Backend selection mirrors ``main.py``: OpenRouter if ``OPENROUTER_API_KEY``
+is set, else Groq if ``GROQ_API_KEY`` is set, else the local Ollama daemon.
 """
 
 from __future__ import annotations
@@ -79,7 +79,9 @@ def play_turn(
     if session.state.tasks and all(t.completed for t in session.state.tasks):
         parts.append(ENDING_TEXT)
         session.over = True
-    else:
+    elif session.state.dialogue is None:
+        # As in main.py: don't tick schedules mid-conversation, so the
+        # dialogue partner can't walk off between exchanges.
         world.tick_npcs(session.state)
 
     return "\n\n".join(parts)
@@ -98,7 +100,11 @@ INTRO_MARKDOWN = (
 
 
 def _build_clients() -> tuple[LLMClient, LLMClient]:
-    """Pick the Groq or Ollama backend exactly as main.py does."""
+    """Pick the OpenRouter, Groq, or Ollama backend exactly as main.py does."""
+    if config.OPENROUTER_API_KEY:
+        from fantsu.clients.openrouter_client import OpenRouterClient
+
+        return OpenRouterClient(), OpenRouterClient()
     if config.GROQ_API_KEY:
         from fantsu.clients.groq_client import GroqClient
 

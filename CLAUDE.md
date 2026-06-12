@@ -26,12 +26,14 @@ fantsu/
   tools.py        game actions → ToolResult; no LLM calls here
   tool_schema.py  OpenAI-compatible tool-call JSON definitions
   prompts.py      system prompt strings — tune here first
-  npc.py          LLMClient protocol + NPC dialogue call
-  narrator.py     process_input: LLM → tool dispatch → narration
+  npc.py          LLMClient protocol + dialogue system (conversation mode,
+                  summarised memories, keyword-matched world facts)
+  narrator.py     process_input: dialogue routing | LLM → tool dispatch → narration
   clients/
-    groq_client.py    GroqClient — Groq cloud API (excluded from mypy)
-    ollama_client.py  OllamaClient — local Ollama daemon (excluded from mypy)
-    z_client.py       ZAIClient — Z.ai cloud API (excluded from mypy)
+    groq_client.py        GroqClient — Groq cloud API (excluded from mypy)
+    ollama_client.py      OllamaClient — local Ollama daemon (excluded from mypy)
+    openrouter_client.py  OpenRouterClient — OpenRouter cloud API (excluded from mypy)
+    z_client.py           ZAIClient — Z.ai cloud API (excluded from mypy)
   main.py         game loop entry point (excluded from mypy)
 
 tests/
@@ -85,7 +87,7 @@ add to `npcs` dict, and add the npc id to the starting location's `npc_ids`.
 - **Narrator prompt**: `fantsu/prompts.py` → `NARRATOR_SYSTEM`
 - **NPC prompt template**: `fantsu/prompts.py` → `NPC_SYSTEM_TEMPLATE`
 - **Models**: `fantsu/config.py` → `NARRATOR_MODEL` / `NPC_MODEL` (set automatically based on backend)
-- **Backend**: set `GROQ_API_KEY` env var to use Groq; unset to use local Ollama
+- **Backend**: set `OPENROUTER_API_KEY` to use OpenRouter, else `GROQ_API_KEY` to use Groq; unset both to use local Ollama
 
 Prompt changes don't require code changes — edit and `make run` to test.
 

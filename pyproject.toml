@@ -42,8 +42,10 @@ exclude = [
     "fantsu/main\\.py",
     "fantsu/web\\.py",
     "fantsu/fanturer\\.py",
+    "fantsu/clients/_inline_tools\\.py",
     "fantsu/clients/groq_client\\.py",
     "fantsu/clients/ollama_client\\.py",
+    "fantsu/clients/openrouter_client\\.py",
     "fantsu/clients/z_client\\.py",
 ]
 
